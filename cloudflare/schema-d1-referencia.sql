@@ -336,7 +336,7 @@ CREATE TABLE IF NOT EXISTS checklist_attachments (
   checklist_id INTEGER NOT NULL,
   checklist_item_id INTEGER NOT NULL,
   event_id TEXT NOT NULL,
-  r2_key TEXT NOT NULL UNIQUE,
+  r2_key TEXT NOT NULL UNIQUE, -- Referência de armazenamento: drive:<fileId> para Google Drive; chaves antigas do R2 continuam suportadas.
   file_name TEXT NOT NULL,
   mime_type TEXT NOT NULL,
   file_size INTEGER NOT NULL,

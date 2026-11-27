@@ -673,7 +673,7 @@ async function gerenciarExecucaoChecklist(request, env) {
   if (action === "upload") {
     const item = await ensureItem(body.checklist_item_id);
     if (!item || Number(item.active)!==1) return resposta({sucesso:false,mensagem:"Item não encontrado ou inativo."},404);
-    if (!env.CHECKLIST_FILES || typeof env.CHECKLIST_FILES.put !== "function") return resposta({sucesso:false,mensagem:"O armazenamento de anexos ainda não está configurado. Configure o bucket R2 CHECKLIST_FILES."},503);
+    if (!env.GAS_WEBAPP_URL || !env.GAS_UPLOAD_SECRET) return resposta({sucesso:false,mensagem:"Integração segura com Google Drive não configurada no Worker. Confira GAS_WEBAPP_URL e GAS_UPLOAD_SECRET."},503);
     const fileName = String(body.file_name || "anexo").replace(/[\\/\r\n\0]/g,"_").slice(0,180);
     const mime = String(body.mime_type || "application/octet-stream").toLowerCase();
     const base64 = String(body.file_base64 || "");
@@ -686,12 +686,23 @@ async function gerenciarExecucaoChecklist(request, env) {
     const startsWith = (signature) => signature.every((value,index)=>bytes[index]===value);
     const validSignature = mime === "application/pdf" ? startsWith([0x25,0x50,0x44,0x46,0x2D]) : mime === "image/jpeg" ? startsWith([0xFF,0xD8,0xFF]) : startsWith([0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A]);
     if (!validSignature) return resposta({sucesso:false,mensagem:"O conteúdo do arquivo não corresponde ao formato informado."},400);
+    const payload = {action:"uploadChecklistAttachmentWorker",internalSecret:env.GAS_UPLOAD_SECRET,eventId:checklist.event_id,checklistId,itemId:item.checklist_item_id,fileName,mimeType:mime,fileBase64:base64};
+    let upstream, raw, result;
+    try {
+      upstream = await fetch(env.GAS_WEBAPP_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload),redirect:"follow"});
+      raw = await upstream.text();
+      try { result = JSON.parse(raw); } catch (_) { return resposta({sucesso:false,mensagem:"O Google Apps Script retornou uma resposta inválida ao enviar o anexo."},502); }
+    } catch(error) {
+      console.error("ERRO NO UPLOAD DO ANEXO DO CHECKLIST:",error?.message||String(error));
+      return resposta({sucesso:false,mensagem:"Falha na comunicação com o Google Drive."},502);
+    }
+    if (!upstream.ok || !result.sucesso || !result.dados?.fileId) return resposta({sucesso:false,mensagem:result.mensagem||"Não foi possível salvar o anexo no Google Drive."},502);
     const attachmentId = crypto.randomUUID();
-    const key = `checklists/${checklist.event_id}/${checklistId}/${item.checklist_item_id}/${attachmentId}`;
-    await env.CHECKLIST_FILES.put(key,bytes,{httpMetadata:{contentType:mime},customMetadata:{fileName,eventId:checklist.event_id,checklistId:String(checklistId),itemId:String(item.checklist_item_id),uploadedBy:actorId}});
+    // A coluna r2_key foi mantida para compatibilidade com a migração já aplicada; agora armazena drive:<fileId>.
+    const storageRef = `drive:${result.dados.fileId}`;
     const historyId = await audit(item.checklist_item_id,"attachment_added",`Anexo adicionado: ${fileName}`);
-    await env.DB.prepare(`INSERT INTO checklist_attachments (attachment_id,checklist_id,checklist_item_id,event_id,r2_key,file_name,mime_type,file_size,uploaded_by,uploaded_by_name,history_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)`).bind(attachmentId,checklistId,item.checklist_item_id,checklist.event_id,key,fileName,mime,bytes.length,actorId,actorName,historyId).run();
-    return resposta({sucesso:true,mensagem:"Anexo enviado.",dados:{attachment_id:attachmentId}});
+    await env.DB.prepare(`INSERT INTO checklist_attachments (attachment_id,checklist_id,checklist_item_id,event_id,r2_key,file_name,mime_type,file_size,uploaded_by,uploaded_by_name,history_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)`).bind(attachmentId,checklistId,item.checklist_item_id,checklist.event_id,storageRef,fileName,mime,bytes.length,actorId,actorName,historyId).run();
+    return resposta({sucesso:true,mensagem:"Anexo enviado ao Google Drive.",dados:{attachment_id:attachmentId}});
   }
   return resposta({sucesso:false,mensagem:"Ação de checklist inválida."},400);
 }
@@ -704,10 +715,37 @@ async function obterAnexoChecklist(request, env) {
   const file = await env.DB.prepare(`SELECT a.*,c.status AS checklist_status FROM checklist_attachments a INNER JOIN checklists c ON c.checklist_id=a.checklist_id WHERE a.attachment_id=? LIMIT 1`).bind(id).first();
   if (!file) return resposta({sucesso:false,mensagem:"Anexo não encontrado."},404);
   if (!(await acessoEventoPermitido(admin,file.event_id,env))) return resposta({sucesso:false,mensagem:"Você não possui acesso a este evento."},403);
-  if (!env.CHECKLIST_FILES || typeof env.CHECKLIST_FILES.get !== "function") return resposta({sucesso:false,mensagem:"Armazenamento de anexos indisponível."},503);
-  const object = await env.CHECKLIST_FILES.get(file.r2_key);
-  if (!object) return resposta({sucesso:false,mensagem:"Arquivo não encontrado no armazenamento."},404);
   const download = body.download === true;
+  const storageRef = String(file.r2_key || "");
+  if (storageRef.startsWith("drive:")) {
+    if (!env.GAS_WEBAPP_URL || !env.GAS_UPLOAD_SECRET) return resposta({sucesso:false,mensagem:"Integração com Google Drive não configurada no Worker."},503);
+    const fileId = storageRef.slice(6);
+    try {
+      const upstream = await fetch(env.GAS_WEBAPP_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"getChecklistAttachmentWorker",internalSecret:env.GAS_UPLOAD_SECRET,fileId}),redirect:"follow"});
+      const raw = await upstream.text(); let result;
+      try { result = JSON.parse(raw); } catch (_) { return resposta({sucesso:false,mensagem:"O Google Apps Script retornou uma resposta inválida ao consultar o anexo."},502); }
+      if (!upstream.ok || !result.sucesso || !result.dados?.base64) return resposta({sucesso:false,mensagem:result.mensagem||"Não foi possível obter o anexo no Google Drive."},502);
+      const dados = result.dados, binary = atob(dados.base64), bytes = new Uint8Array(binary.length);
+      for (let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+      const mime = String(dados.mimeType || file.mime_type || "application/octet-stream").toLowerCase();
+      const safeName = String(dados.nome || file.file_name || "anexo").replace(/[\r\n\"\\]/g,"_");
+      const inline = !download && (mime === "application/pdf" || mime.startsWith("image/"));
+      const headers = new Headers(CORS_HEADERS);
+      headers.set("Content-Type",mime);
+      headers.set("Content-Length",String(bytes.length));
+      headers.set("Content-Disposition",`${inline?"inline":"attachment"}; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`);
+      headers.set("Cache-Control","private, no-store, max-age=0");
+      headers.set("X-Content-Type-Options","nosniff");
+      return new Response(bytes,{status:200,headers});
+    } catch(error) {
+      console.error("ERRO AO OBTER ANEXO DO CHECKLIST NO DRIVE:",error?.message||String(error));
+      return resposta({sucesso:false,mensagem:"Falha na comunicação com o Google Drive."},502);
+    }
+  }
+  // Compatibilidade com anexos antigos armazenados no R2, caso existam.
+  if (!env.CHECKLIST_FILES || typeof env.CHECKLIST_FILES.get !== "function") return resposta({sucesso:false,mensagem:"Anexo antigo não encontrado no armazenamento configurado."},503);
+  const object = await env.CHECKLIST_FILES.get(storageRef);
+  if (!object) return resposta({sucesso:false,mensagem:"Arquivo não encontrado no armazenamento."},404);
   const safeName = String(file.file_name || "anexo").replace(/[\r\n\"]/g,"_").replace(/[^\x20-\x7E]/g,"_");
   return new Response(object.body,{status:200,headers:{...CORS_HEADERS,"Content-Type":file.mime_type || "application/octet-stream","Content-Length":String(file.file_size || object.size || 0),"Content-Disposition":`${download?'attachment':'inline'}; filename="${safeName}"`,"Cache-Control":"private, no-store"}});
 }

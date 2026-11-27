@@ -1,0 +1,45 @@
+ATUALIZAÇÃO - ANEXOS DOS CHECKLISTS PELO GOOGLE DRIVE
+
+IMPORTANTE
+Você já executou a migração cloudflare/migracao-checklists-execucao.sql e publicou a primeira versão do Worker. NÃO execute novamente essa migração. Esta atualização não exige nova migração D1 e não exige bucket/binding R2.
+
+O QUE MUDA
+- Os anexos novos dos itens passam a ser enviados ao Google Drive pelo Apps Script.
+- Os arquivos ficam na pasta raiz já configurada em DRIVE_ROOT_FOLDER_ID, organizados assim:
+  CHECKLISTS-<EVENTO>/CHECKLIST-<ID>/ITEM-<ID>/
+- PDF, JPG e PNG, até 5 MB.
+- Os arquivos não recebem permissão pública. A leitura e o download passam pelo Worker, que valida sessão, evento e vínculo do anexo no D1.
+- O D1 continua guardando os metadados e a auditoria. Para não exigir alteração na migração já executada, a coluna legada r2_key passa a guardar a referência "drive:<fileId>" para os novos anexos.
+- O Worker mantém compatibilidade de leitura com referências antigas do R2, caso existam.
+
+PASSO 1 - ATUALIZAR GOOGLE APPS SCRIPT
+1. No projeto Apps Script usado pelo portal, atualize os arquivos:
+   - backend/Codigo.gs
+   - backend/Despesas.gs
+2. Salve o projeto.
+3. Em Implantar > Gerenciar implantações, edite a implantação do Web App e publique uma nova versão.
+4. Confirme que o Web App continua acessível pela URL configurada em GAS_WEBAPP_URL no Worker.
+5. A integração reutiliza a propriedade de script CLOUDFLARE_UPLOAD_SECRET já usada pelos comprovantes de patrocínio/despesas. Não crie outra chave se essa integração já está funcionando.
+
+PASSO 2 - ATUALIZAR O WORKER
+1. Publique novamente cloudflare/worker.js no Worker itaitinga-mtb-api.
+2. Confirme que as variáveis GAS_WEBAPP_URL e GAS_UPLOAD_SECRET continuam configuradas.
+3. Não é necessário criar binding CHECKLIST_FILES nem bucket R2 para os anexos novos.
+
+PASSO 3 - PAGES
+Não há alterações obrigatórias no frontend nesta atualização. Se ainda não publicou a página independente do pacote anterior, publique checklist.html, _redirects, css/checklist.css e js/checklist.js junto com os arquivos de Admin atualizados daquele pacote.
+
+TESTE RECOMENDADO
+1. Abra um checklist ativo usando um usuário com acesso ao evento.
+2. Em um item, envie uma imagem JPG/PNG e um PDF (até 5 MB cada).
+3. Confira no Google Drive a estrutura CHECKLISTS-EVENTO/CHECKLIST-ID/ITEM-ID.
+4. Na página, use Visualizar e Baixar.
+5. Confira o histórico: cada anexo deve aparecer com o nome do usuário e horário.
+6. Teste com outro usuário autorizado no mesmo evento.
+7. Tente abrir um anexo sem sessão válida ou de evento sem permissão; o Worker deve negar.
+
+OBSERVAÇÕES
+- Não torne a pasta ou os arquivos públicos no Google Drive.
+- Não execute novamente a migração D1 já aplicada.
+- Não precisa configurar R2 para os novos anexos.
+- A coluna r2_key tem esse nome por compatibilidade com a migração já executada; para anexos enviados ao Drive ela contém "drive:<fileId>".

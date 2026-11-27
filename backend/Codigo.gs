@@ -3133,6 +3133,23 @@ case "uploadAnexoPatrocinioWorker": {
   return resposta_(true, uploadAnexoPatrocinio_(body));
 }
 
+case "uploadChecklistAttachmentWorker": {
+  const esperado = PropertiesService.getScriptProperties().getProperty("CLOUDFLARE_UPLOAD_SECRET");
+  if (!esperado || String(body.internalSecret || "") !== esperado) throw new Error("Solicitação interna não autorizada.");
+  return resposta_(true, uploadAnexoChecklist_(body));
+}
+
+case "getChecklistAttachmentWorker": {
+  const esperado = PropertiesService.getScriptProperties().getProperty("CLOUDFLARE_UPLOAD_SECRET");
+  if (!esperado || String(body.internalSecret || "") !== esperado) throw new Error("Solicitação interna não autorizada.");
+  const fileId = String(body.fileId || "").trim();
+  if (!fileId) throw new Error("Arquivo não informado.");
+  const file = DriveApp.getFileById(fileId);
+  const blob = file.getBlob();
+  const bytes = blob.getBytes();
+  return resposta_(true, {nome:file.getName(),mimeType:blob.getContentType() || file.getMimeType() || "application/octet-stream",tamanho:bytes.length,base64:Utilities.base64Encode(bytes)});
+}
+
 case "uploadAnexoDespesaWorker": {
   const esperado = PropertiesService.getScriptProperties().getProperty("CLOUDFLARE_UPLOAD_SECRET");
   if (!esperado || String(body.internalSecret || "") !== esperado) throw new Error("Solicitação interna não autorizada.");

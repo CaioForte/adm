@@ -21,20 +21,12 @@ Execute UMA ÚNICA VEZ:
 Não execute novamente depois de aplicada. A migração adiciona o status de execução
 nos itens e cria as tabelas de histórico e anexos. Não apaga dados existentes.
 
-PASSO 2 - ARMAZENAMENTO PRIVADO R2
-1. No Cloudflare, abra R2 e crie um bucket privado, por exemplo:
-   itaitinga-checklists-private
-2. Abra Workers & Pages > itaitinga-mtb-api > Settings > Bindings.
-3. Adicione um R2 bucket binding:
-   Variable name: CHECKLIST_FILES
-   Bucket: itaitinga-checklists-private (ou o nome escolhido)
-4. Salve a configuração.
+PASSO 2 - ARMAZENAMENTO DOS ANEXOS
+A versão inicial deste pacote foi preparada para R2, mas a implementação atualizada usa Google Drive pelo Apps Script. NÃO crie bucket R2 nem binding CHECKLIST_FILES. Siga o arquivo:
+  cloudflare/ATUALIZACAO-CHECKLISTS-GOOGLE-DRIVE.txt
 
-IMPORTANTE: não habilite acesso público ao bucket. Os arquivos são lidos pelo Worker
-somente depois de validar a sessão e o acesso do usuário ao evento.
-
-PASSO 3 - PUBLICAR WORKER
-Publique cloudflare/worker.js depois da migração D1 e da configuração do binding R2.
+PASSO 3 - PUBLICAR WORKER E APPS SCRIPT
+A migração D1 já aplicada permanece válida. Para anexos via Google Drive, atualize os arquivos backend/Codigo.gs e backend/Despesas.gs no Apps Script, publique uma nova versão do Web App e publique novamente cloudflare/worker.js. Consulte o arquivo de atualização acima.
 
 PASSO 4 - PUBLICAR CLOUDFLARE PAGES
 Envie os arquivos:

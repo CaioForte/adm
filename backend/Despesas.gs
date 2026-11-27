@@ -2034,6 +2034,34 @@ function pagarDespesa_(token, dados) {
 /* =====================================================
    UPLOAD DE COMPROVANTE DE PATROCÍNIO
    ===================================================== */
+function uploadAnexoChecklist_(body) {
+  const evento = String(body.eventId || "").trim().toUpperCase();
+  const checklistId = Number(body.checklistId || 0);
+  const itemId = Number(body.itemId || 0);
+  const nomeOriginal = String(body.fileName || "anexo").trim();
+  const mimeType = String(body.mimeType || "application/octet-stream").trim().toLowerCase();
+  const base64 = String(body.fileBase64 || "").trim();
+  if (!evento || !Number.isSafeInteger(checklistId) || checklistId < 1 || !Number.isSafeInteger(itemId) || itemId < 1) throw new Error("Vínculo do checklist ou item inválido.");
+  if (!base64) throw new Error("Arquivo não informado.");
+  if (!["application/pdf", "image/jpeg", "image/png"].includes(mimeType)) throw new Error("Formato não permitido. Envie PDF, JPG ou PNG.");
+  if (base64.length > 7 * 1024 * 1024) throw new Error("Arquivo muito grande. O limite é de 5 MB.");
+  const bytes = Utilities.base64Decode(base64);
+  if (!bytes.length || bytes.length > 5 * 1024 * 1024) throw new Error("O anexo deve ter no máximo 5 MB.");
+  const root = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+  const getOrCreateFolder = (parent, folderName) => {
+    const folders = parent.getFoldersByName(folderName);
+    return folders.hasNext() ? folders.next() : parent.createFolder(folderName);
+  };
+  const eventFolder = getOrCreateFolder(root, "CHECKLISTS-" + evento);
+  const checklistFolder = getOrCreateFolder(eventFolder, "CHECKLIST-" + checklistId);
+  const itemFolder = getOrCreateFolder(checklistFolder, "ITEM-" + itemId);
+  const extensao = obterExtensao_(nomeOriginal, mimeType);
+  const nomeFinal = "ANEXO-CHECKLIST-" + checklistId + "-ITEM-" + itemId + "-" + Date.now() + extensao;
+  const blob = Utilities.newBlob(bytes, mimeType, nomeFinal);
+  const file = itemFolder.createFile(blob);
+  return {fileId:file.getId(),nome:file.getName(),mimeType:file.getMimeType(),tamanho:file.getSize()};
+}
+
 function uploadAnexoPatrocinio_(body) {
   const evento = String(body.evento || "").trim().toUpperCase();
   const nomeOriginal = String(body.nome || "comprovante").trim();
