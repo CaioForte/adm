@@ -9454,7 +9454,7 @@ function renderizarChecklistsAdmin_() {
       <td><span class="checklist-status ${arquivado ? "checklist-status-archived" : "checklist-status-active"}">${arquivado ? "ARQUIVADO" : "ATIVO"}</span></td>
       <td>${formatarDataChecklist_(c.created_at)}</td>
       <td><div class="checklist-actions">
-        <a class="action" href="/checklist/${Number(c.checklist_id)}" target="_blank" rel="noopener">ABRIR LINK</a>
+        <a class="action" href="/checklist.html?id=${Number(c.checklist_id)}" target="_blank" rel="noopener">ABRIR LINK</a>
         <button type="button" class="action" data-checklist-edit="${Number(c.checklist_id)}" ${arquivado ? "disabled" : ""}>EDITAR</button>
         <button type="button" class="action" data-checklist-status="${Number(c.checklist_id)}" data-status="${arquivado ? "active" : "archived"}">${arquivado ? "REATIVAR" : "ARQUIVAR"}</button>
       </div></td>
