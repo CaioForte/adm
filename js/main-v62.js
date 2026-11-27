@@ -5017,36 +5017,50 @@ async function inicializarEstadoCidadeCadastroAdmin_() {
 
   cidadeSelect.disabled = true;
   cidadeSelect.innerHTML = '<option value="">Selecione primeiro o estado</option>';
-  let cidadesPorEstado = null;
+  // Usa a mesma fonte do formulário público: API oficial do IBGE.
+  // Assim não depende de um arquivo cidades.json separado no painel administrativo.
+  let requisicaoCidadesAdmin = 0;
 
   estadoSelect.addEventListener("change", async () => {
     const uf = estadoSelect.value;
+    const requisicaoAtual = ++requisicaoCidadesAdmin;
+
     cidadeSelect.disabled = true;
     cidadeSelect.innerHTML = '<option value="">Carregando cidades...</option>';
+
     if (!uf) {
       cidadeSelect.innerHTML = '<option value="">Selecione primeiro o estado</option>';
       return;
     }
+
     try {
-      if (!cidadesPorEstado) {
-        const resposta = await fetch("js/cidades.json");
-        if (!resposta.ok) throw new Error("Não foi possível carregar cidades.json");
-        cidadesPorEstado = await resposta.json();
-      }
+      const url = `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${encodeURIComponent(uf)}/municipios`;
+      const resposta = await fetch(url);
+      if (!resposta.ok) throw new Error(`IBGE respondeu HTTP ${resposta.status}`);
+
+      const cidades = await resposta.json();
+      if (!Array.isArray(cidades)) throw new Error("Resposta inválida da API do IBGE");
+
+      // Ignora respostas antigas caso o usuário troque de estado rapidamente.
+      if (requisicaoAtual !== requisicaoCidadesAdmin) return;
+
       cidadeSelect.innerHTML = '<option value="">Selecione a cidade</option>';
-      (cidadesPorEstado[uf] || [])
-        .slice()
-        .sort((a, b) => a.localeCompare(b, "pt-BR"))
-        .forEach(nomeCidade => {
+      cidades
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"))
+        .forEach(cidade => {
+          if (!cidade || !cidade.nome) return;
           const option = document.createElement("option");
-          option.value = nomeCidade;
-          option.textContent = nomeCidade;
+          option.value = cidade.nome;
+          option.textContent = cidade.nome;
           cidadeSelect.appendChild(option);
         });
+
       cidadeSelect.disabled = false;
     } catch (erro) {
-      console.error("Erro ao carregar cidades do cadastro administrativo:", erro);
-      cidadeSelect.innerHTML = '<option value="">Erro ao carregar cidades</option>';
+      if (requisicaoAtual !== requisicaoCidadesAdmin) return;
+      console.error("Erro ao carregar cidades do IBGE no cadastro administrativo:", erro);
+      cidadeSelect.innerHTML = '<option value="">Não foi possível carregar as cidades</option>';
+      cidadeSelect.disabled = true;
     }
   });
 }

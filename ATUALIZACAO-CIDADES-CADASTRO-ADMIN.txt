@@ -1,0 +1,15 @@
+CORREÇÃO — CARREGAMENTO DE CIDADES NO CADASTRO ADMINISTRATIVO
+
+O que foi alterado:
+- O cadastro administrativo agora consulta a API oficial de municípios do IBGE, da mesma forma que o formulário público.
+- Remove a dependência incorreta de buscar cidades.json como se fosse um arquivo JSON de dados.
+- Mantém os estados e os campos newEstado/newCidade do cadastro administrativo.
+- Evita que uma resposta atrasada de um estado sobrescreva as cidades de outro estado selecionado em seguida.
+
+Publicação:
+1. Substitua os arquivos do projeto pelo conteúdo deste pacote no Cloudflare Pages.
+2. Publique uma nova versão.
+3. No painel administrativo, use Ctrl+F5, selecione um estado e confira a lista de cidades.
+
+Não foi alterado o formulário público de inscrições, o Worker, o banco D1 ou as migrações.
+A consulta de cidades depende de acesso à API do IBGE pelo navegador.
