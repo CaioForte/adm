@@ -1,0 +1,15 @@
+ATUALIZAÇÃO - VALORES GERAL E LOCAL NOS LOTES
+
+1. Antes de publicar o Worker e o site, execute uma única vez no D1 a migração:
+   cloudflare/migracao-valores-lotes-local-geral.sql
+
+2. Publique o Worker atualizado (cloudflare/worker.js).
+3. Publique o site atualizado (index.html, js/main-v62.js).
+
+O valor atual de cada lote é copiado para os campos geral e local, preservando
+os preços existentes. O campo antigo amount_cents continua recebendo o valor
+geral para manter compatibilidade com o fluxo atual de inscrições.
+
+Depois da atualização, novos lotes exigirão os dois valores. A aplicação do
+valor local durante a inscrição será implementada na próxima etapa, junto com
+a marcação de categoria local.

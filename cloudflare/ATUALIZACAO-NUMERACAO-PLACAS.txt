@@ -1,0 +1,18 @@
+ATUALIZAÇÃO — NUMERAÇÃO AUTOMÁTICA DE PLACAS
+
+1. Execute cloudflare/migracao-numeracao-placas.sql UMA ÚNICA VEZ no D1 existente.
+2. Publique index.html, js/main-v62.js e css/styles.css no Cloudflare Pages.
+3. Publique cloudflare/worker.js no Worker.
+
+REGRAS:
+- Cada evento possui sua própria sequência.
+- O cadastro do evento define o número inicial da placa.
+- A placa é reservada no momento do cadastro da inscrição, sem depender do pagamento.
+- O último número utilizado fica salvo em events.last_plate_number.
+- Cancelamentos e falhas posteriores não liberam o número para reutilização.
+- O número pode passar de 999 (1000, 1001...).
+- O número interno da inscrição permanece independente.
+- Eventos existentes começam em 1 após a migração. Inscrições antigas permanecem sem número de placa; nenhuma numeração histórica é inventada.
+- O número inicial pode ser alterado enquanto nenhuma placa tiver sido atribuída naquele evento. Depois disso, fica bloqueado para preservar a sequência.
+
+IMPORTANTE: esta atualização não altera pagamentos, checkout InfinitePay nem dados existentes. A migração não foi executada e os arquivos não foram publicados.

@@ -1,0 +1,232 @@
+
+PRAGMA foreign_keys = ON;
+
+-- EVENTOS
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- USUÁRIOS ADMINISTRATIVOS
+CREATE TABLE IF NOT EXISTS admins (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  password_hash TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT
+);
+
+-- CATEGORIAS
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  max_age INTEGER,
+  required_documents TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(id)
+);
+
+-- LOTES
+CREATE TABLE IF NOT EXISTS batches (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  start_date TEXT,
+  end_date TEXT,
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(id)
+);
+
+-- INSCRIÇÕES
+CREATE TABLE IF NOT EXISTS registrations (
+  id TEXT PRIMARY KEY,
+  registration_number TEXT NOT NULL UNIQUE,
+  event_id TEXT NOT NULL,
+  category_id TEXT,
+  batch_id TEXT,
+  name TEXT NOT NULL,
+  cpf TEXT,
+  email TEXT,
+  phone TEXT,
+  category_name TEXT,
+  payment_status TEXT NOT NULL DEFAULT 'PENDENTE',
+  registration_status TEXT NOT NULL DEFAULT 'PENDENTE',
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  notes TEXT,
+  order_nsu TEXT,
+  payment_method TEXT,
+  transaction_nsu TEXT,
+  payment_proof_key TEXT,
+  payment_date TEXT,
+  checkout_url TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT,
+  FOREIGN KEY (event_id) REFERENCES events(id),
+  FOREIGN KEY (category_id) REFERENCES categories(id),
+  FOREIGN KEY (batch_id) REFERENCES batches(id)
+);
+
+-- CONFIGURAÇÕES
+CREATE TABLE IF NOT EXISTS settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id TEXT,
+  setting_key TEXT NOT NULL,
+  setting_value TEXT,
+  UNIQUE(event_id, setting_key),
+  FOREIGN KEY (event_id) REFERENCES events(id)
+);
+
+-- DOCUMENTOS E ARQUIVOS NO R2
+CREATE TABLE IF NOT EXISTS registration_documents (
+  id TEXT PRIMARY KEY,
+  registration_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  object_key TEXT NOT NULL,
+  content_type TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (registration_id) REFERENCES registrations(id)
+);
+
+-- ÍNDICES PARA CONSULTAS
+CREATE INDEX IF NOT EXISTS idx_registrations_event
+ON registrations(event_id);
+
+CREATE INDEX IF NOT EXISTS idx_registrations_cpf
+ON registrations(cpf);
+
+CREATE INDEX IF NOT EXISTS idx_registrations_payment
+ON registrations(payment_status);
+
+CREATE INDEX IF NOT EXISTS idx_categories_event
+ON categories(event_id);
+
+CREATE INDEX IF NOT EXISTS idx_batches_event
+ON batches(event_id);
+
+-- EVENTOS INICIAIS
+INSERT OR IGNORE INTO events (id, name, type, active)
+VALUES
+  ('MTB2026', 'Itaitinga MTB Race', 'MTB', 1),
+  ('TRAIL2026', 'Itaitinga Trail Run', 'TRAIL', 1);
+
+
+
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY,
+    admin_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+
+    FOREIGN KEY (admin_id)
+        REFERENCES admins(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_admin
+ON sessions(admin_id);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_expiration
+ON sessions(expires_at);
+
+
+ALTER TABLE admins
+ADD COLUMN password_salt TEXT;
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY,
+    admin_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES admins(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_admin
+ON sessions(admin_id);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_expiration
+ON sessions(expires_at);
+
+-- DESPESAS
+CREATE TABLE IF NOT EXISTS expenses (
+    id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL,
+    expense_number INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    supplier_company TEXT,
+    amount_cents INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'PENDENTE',
+    due_date TEXT,
+    payment_date TEXT,
+    payment_method TEXT,
+    payment_observation TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+
+    FOREIGN KEY (event_id)
+        REFERENCES events(id),
+
+    UNIQUE (event_id, expense_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_event
+ON expenses(event_id);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_status
+ON expenses(status);
+
+
+-- ANEXOS DAS DESPESAS
+CREATE TABLE IF NOT EXISTS expense_documents (
+    id TEXT PRIMARY KEY,
+    expense_id TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    object_key TEXT NOT NULL,
+    content_type TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (expense_id)
+        REFERENCES expenses(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_expense_documents_expense
+ON expense_documents(expense_id);
+
+
+
+ALTER TABLE registrations ADD COLUMN birth_date TEXT;
+ALTER TABLE registrations ADD COLUMN state TEXT;
+ALTER TABLE registrations ADD COLUMN city TEXT;
+ALTER TABLE registrations ADD COLUMN pcd TEXT;
+ALTER TABLE registrations ADD COLUMN team TEXT;
+ALTER TABLE registrations ADD COLUMN created_by TEXT;
+ALTER TABLE registrations ADD COLUMN payment_email_sent_at TEXT;
+ALTER TABLE registrations ADD COLUMN cpf_normalized TEXT;
+
+
+CREATE UNIQUE INDEX IF NOT EXISTS
+idx_registrations_event_cpf
+ON registrations(event_id, cpf_normalized)
+WHERE cpf_normalized IS NOT NULL
+AND cpf_normalized <> '';
+
+
+ALTER TABLE expenses
+ADD COLUMN responsible TEXT;
+
+ALTER TABLE expenses
+ADD COLUMN supplier_contact TEXT;
+
+ALTER TABLE registration_documents
+ADD COLUMN document_type TEXT;

@@ -1,0 +1,18 @@
+ATUALIZACAO - CADASTRO ADMINISTRATIVO DE INSCRICOES
+
+O cadastro administrativo agora possui os campos:
+- Data de nascimento
+- Cidade
+- Estado (UF)
+
+Os tres campos sao enviados ao Cloudflare Worker e gravados nas colunas ja existentes birth_date, city e state da tabela registrations no D1. Os detalhes da inscricao exibem a cidade acompanhada da UF quando ambas estiverem preenchidas.
+
+PUBLICACAO
+1. Atualizar o frontend no Cloudflare Pages com os arquivos do projeto, incluindo index.html e js/main-v62.js.
+2. Atualizar cloudflare/worker.js no Cloudflare Workers e publicar.
+
+BANCO DE DADOS
+Nao executar SQL. A implementacao utiliza as colunas birth_date, city e state ja previstas na migracao existente.
+
+GOOGLE APPS SCRIPT
+Nenhuma alteracao necessaria.

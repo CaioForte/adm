@@ -1,0 +1,28 @@
+ITAITINGA MTB RACE — INSCRIÇÃO ADMINISTRATIVA COM VALOR LOCAL/GERAL
+
+O QUE FOI ALTERADO
+- No cadastro administrativo, o valor é preenchido automaticamente conforme a categoria selecionada e o lote vigente.
+- Categorias gerais usam o preço geral do lote.
+- Categorias locais usam o preço local do lote.
+- O campo de valor permanece bloqueado para evitar alteração manual acidental.
+- O Worker recalcula o preço no servidor; não confia no valor enviado pelo navegador.
+- Para categorias locais, o Worker exige COMPROVANTE_RESIDENCIA mesmo que o navegador não envie essa exigência.
+- O valor efetivamente aplicado continua gravado em registrations.amount_cents, preservando o histórico financeiro.
+- Cortesias continuam com valor zero e não dependem de lote vigente, mas continuam respeitando os documentos obrigatórios da categoria.
+
+PUBLICAÇÃO
+1. Não há nova migração D1 nesta etapa.
+2. Publique o arquivo cloudflare/worker.js no Worker.
+3. Publique os arquivos do site, incluindo index.html e js/main-v62.js.
+4. Faça uma inscrição de teste pelo painel com categoria geral e outra com categoria local.
+
+TESTES RECOMENDADOS
+- Categoria geral: conferir preço geral do lote vigente e finalizar cadastro.
+- Categoria local: conferir preço local e validar que o comprovante de residência é obrigatório.
+- Tentar cadastrar categoria local sem comprovante: o cadastro deve ser recusado.
+- Cortesia: valor deve permanecer R$ 0,00.
+- Conferir em D1 que registrations.amount_cents guarda o valor correto em centavos.
+- Conferir que o checkout InfinitePay, quando gerado, utiliza o mesmo valor salvo na inscrição.
+
+OBSERVAÇÃO
+A conferência do comprovante de residência continua manual pela organização. O sistema apenas exige e armazena o documento.

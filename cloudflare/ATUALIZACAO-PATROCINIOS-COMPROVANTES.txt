@@ -1,0 +1,25 @@
+ITAITINGA MTB RACE — COMPROVANTES DE PATROCÍNIOS E MODAL ATUALIZADO
+
+ARQUIVOS ALTERADOS
+- index.html: modal redesenhado e coluna de comprovante na listagem.
+- css/styles.css: estilos responsivos exclusivos do modal de patrocínios.
+- js/main-v62.js: seleção, validação e envio do comprovante; mantém comprovante existente ao editar sem anexar outro.
+- cloudflare/worker.js: validação de sessão, evento, tipo e tamanho; grava os metadados no D1.
+- backend/Codigo.gs e backend/Despesas.gs: upload seguro do arquivo para Google Drive na pasta PATROCINIOS-<EVENTO>.
+
+MIGRAÇÃO D1
+Execute UMA VEZ: cloudflare/migracao-comprovantes-patrocinios.sql
+Não execute novamente depois que as três colunas forem criadas.
+
+PUBLICAÇÃO
+1. Execute a migração acima no D1.
+2. Publique backend/Codigo.gs e backend/Despesas.gs no projeto Google Apps Script e atualize a implantação do Web App, mantendo a propriedade CLOUDFLARE_UPLOAD_SECRET já utilizada pelo Worker.
+3. Publique cloudflare/worker.js no Worker.
+4. Publique index.html, css/styles.css e js/main-v62.js no Pages.
+
+COMPROVANTE
+- Opcional; PDF, JPG ou PNG; até 5 MB.
+- Arquivo salvo no Google Drive, na pasta PATROCINIOS-<EVENTO>.
+- O D1 guarda o ID, nome e link do arquivo.
+- Ao editar um lançamento sem selecionar novo arquivo, o comprovante atual é preservado.
+- O link abre o Google Drive e depende da conta Google ter permissão para acessar a pasta.

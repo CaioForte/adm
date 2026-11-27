@@ -1,0 +1,9 @@
+ATUALIZAÇÃO: CATEGORIA LOCAL
+
+1. Execute uma única vez o arquivo migracao-categoria-local.sql no banco D1.
+2. Publique o Worker atualizado (cloudflare/worker.js).
+3. Publique o frontend atualizado (index.html, js/main-v62.js e demais arquivos do projeto).
+
+Na tela de cadastro/edição de categoria, marque “Categoria local” para torná-la exclusiva para atletas residentes. Ao marcar, o comprovante de residência é selecionado automaticamente e não pode ser desmarcado enquanto a categoria permanecer local. O Worker também garante esse documento como obrigatório.
+
+Categorias já existentes permanecem gerais. Esta etapa apenas configura a categoria e o documento obrigatório; a validação da residência e a seleção do valor local na inscrição serão implementadas na próxima etapa.

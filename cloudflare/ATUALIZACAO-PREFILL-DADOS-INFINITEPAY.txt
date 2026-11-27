@@ -1,0 +1,17 @@
+ATUALIZAÇÃO — PRÉ-PREENCHIMENTO DO CHECKOUT INFINITEPAY
+
+Arquivo alterado:
+- cloudflare/worker.js
+
+O que foi ajustado:
+- O Worker envia nome e e-mail do cadastro no objeto customer da InfinitePay.
+- O telefone é enviado somente quando pode ser normalizado para o formato internacional (+55 para números brasileiros).
+- Telefones vazios ou fora dos formatos aceitos são omitidos, evitando parâmetros inválidos no checkout.
+- A mesma função é utilizada na geração automática do checkout da inscrição manual e na geração/reutilização pelo botão do modal administrativo.
+
+Publicação:
+1. Publique o arquivo cloudflare/worker.js no Worker itaitinga-mtb-api.
+2. Não é necessário executar SQL nem alterar dados existentes no D1.
+3. Não é necessário atualizar o Google Apps Script.
+
+Observação: a InfinitePay pode continuar solicitando confirmação do telefone/e-mail por código, mesmo com os campos pré-preenchidos.

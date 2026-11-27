@@ -1,0 +1,52 @@
+ATUALIZAÇÃO - CHECKLISTS NO ADMIN E AJUSTES DE DASHBOARD/COMPROVANTES
+
+1. Banco de dados
+   Execute UMA VEZ no Cloudflare D1:
+   cloudflare/migracao-checklists.sql
+
+2. Worker
+   Publique cloudflare/worker.js.
+
+3. Frontend Cloudflare Pages
+   Publique:
+   - index.html
+   - css/styles.css
+   - js/main-v62.js
+
+O menu "Checklists" aparece no Admin e trabalha sobre o evento selecionado.
+Cada checklist recebe checklist_id numérico próprio. Cada item recebe
+checklist_item_id numérico próprio e guarda checklist_id como vínculo.
+A ordem inicial dos itens segue o checklist_item_id.
+
+O cadastro permite:
+- Criar checklist com título, descrição e quantidade livre de itens.
+- Editar título, descrição e itens.
+- Adicionar itens a qualquer momento.
+- Inativar e reativar itens sem excluir registros.
+- Arquivar e reativar checklists sem apagar dados.
+- Listar somente os checklists do evento selecionado.
+
+Ajustes adicionais incluídos:
+- O dashboard volta a carregar quando uma sessão válida é restaurada após
+  atualizar a página e também ao abrir a página Dashboard.
+- O comprovante de patrocínio abre em modal com opção de baixar, usando
+  leitura autenticada pelo Worker. O arquivo continua privado no Google Drive;
+  não é necessário alterar permissões do arquivo nem publicar links públicos.
+
+Nesta etapa ainda não estão incluídos a página independente de execução,
+login dos participantes, anexos e observações dos itens ou a trilha completa
+de auditoria. Esses recursos virão nas próximas fases, usando os IDs e
+relacionamentos criados agora.
+
+IMPORTANTE:
+- Não execute a migração novamente depois de aplicada.
+- Nenhum dado existente será apagado ou alterado por esta migração.
+- O Admin usa a sessão atual do Worker e respeita as permissões do usuário
+  para o evento selecionado.
+- Não é necessário atualizar o Apps Script para a visualização de comprovantes:
+  o Worker reutiliza a ação segura de leitura de arquivo já usada pelas despesas.
+
+ETAPA SEGUINTE - EXECUÇÃO INDEPENDENTE
+A página de execução, login do portal, status, observações, anexos privados e auditoria
+foram adicionados em cloudflare/ATUALIZACAO-CHECKLISTS-EXECUCAO.txt.
+Consulte esse arquivo para a segunda migração D1 e configuração do bucket R2.

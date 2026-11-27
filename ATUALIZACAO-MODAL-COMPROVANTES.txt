@@ -1,0 +1,19 @@
+ATUALIZAÇÃO — VISUALIZAÇÃO DE COMPROVANTES EM MODAL
+
+Esta atualização permite visualizar comprovantes de parcelas dentro do painel, sem redirecionar para o login do Google. O acesso continua privado e passa pela validação da sessão do administrador no Cloudflare Worker.
+
+PUBLICAR OS ARQUIVOS
+1. Cloudflare Worker: substituir o conteúdo publicado por cloudflare/worker.js e salvar/deploy.
+2. Google Apps Script: atualizar o projeto com backend/Codigo.gs. Não é necessário alterar Despesas.gs nesta atualização. Publicar uma nova versão do Web App, mantendo a URL /exec já configurada no Worker.
+3. Cloudflare Pages: publicar os arquivos do projeto, incluindo index.html e js/main-v62.js.
+
+CONFIGURAÇÃO
+- Não executar SQL.
+- Não alterar GAS_WEBAPP_URL, GAS_UPLOAD_SECRET ou CLOUDFLARE_UPLOAD_SECRET. A atualização reutiliza a integração segura já configurada.
+- Não tornar a pasta ou os arquivos do Google Drive públicos.
+
+TESTE
+Após a publicação, entrar no painel, abrir uma despesa com comprovante e clicar em VER COMPROVANTE. Imagens e PDFs devem abrir dentro do modal. Outros formatos terão opção de download.
+
+OBSERVAÇÃO
+A validação final depende da publicação no ambiente Cloudflare/Google do projeto. Os arquivos foram verificados localmente quanto à sintaxe JavaScript e integridade do ZIP; o acesso real ao Google Drive precisa ser confirmado no ambiente publicado.

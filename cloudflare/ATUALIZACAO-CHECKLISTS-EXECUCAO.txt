@@ -1,0 +1,69 @@
+ATUALIZAÇÃO - PÁGINA INDEPENDENTE DE EXECUÇÃO DOS CHECKLISTS
+
+O que foi incluído
+- Página independente em /checklist/ID, sem misturar a interface com o Admin.
+- Login com o mesmo e-mail e senha do portal (mesma autenticação do Worker).
+- Acesso limitado aos eventos liberados para a conta autenticada.
+- Qualquer usuário autorizado no evento pode atualizar qualquer item.
+- Status por item: Pendente, Em andamento e Resolvido.
+- Reabertura de item resolvido exige justificativa.
+- Observações são acrescentadas ao histórico; não substituem observações anteriores.
+- Anexos PDF, JPG e PNG, até 5 MB por arquivo.
+- Visualização e download de anexos por rota autenticada.
+- Histórico registra usuário, e-mail, ação, detalhe, status anterior/novo e data/hora.
+- O Admin passa a exibir o link individual de execução de cada checklist.
+- Itens inativos não aparecem na execução. Checklists arquivados ficam somente para consulta.
+
+PASSO 1 - MIGRAÇÃO D1
+Execute UMA ÚNICA VEZ:
+  cloudflare/migracao-checklists-execucao.sql
+
+Não execute novamente depois de aplicada. A migração adiciona o status de execução
+nos itens e cria as tabelas de histórico e anexos. Não apaga dados existentes.
+
+PASSO 2 - ARMAZENAMENTO PRIVADO R2
+1. No Cloudflare, abra R2 e crie um bucket privado, por exemplo:
+   itaitinga-checklists-private
+2. Abra Workers & Pages > itaitinga-mtb-api > Settings > Bindings.
+3. Adicione um R2 bucket binding:
+   Variable name: CHECKLIST_FILES
+   Bucket: itaitinga-checklists-private (ou o nome escolhido)
+4. Salve a configuração.
+
+IMPORTANTE: não habilite acesso público ao bucket. Os arquivos são lidos pelo Worker
+somente depois de validar a sessão e o acesso do usuário ao evento.
+
+PASSO 3 - PUBLICAR WORKER
+Publique cloudflare/worker.js depois da migração D1 e da configuração do binding R2.
+
+PASSO 4 - PUBLICAR CLOUDFLARE PAGES
+Envie os arquivos:
+- checklist.html
+- _redirects
+- css/checklist.css
+- js/checklist.js
+- index.html
+- js/main-v62.js
+- cloudflare/worker.js (no Worker, não no Pages)
+
+A regra _redirects faz /checklist/15 abrir checklist.html e mantém o ID no endereço.
+O link individual também aparece na listagem de checklists do Admin.
+
+COMO TESTAR
+1. Entre no Admin e copie/abra o link de um checklist ativo.
+2. Entre com o mesmo usuário e senha usados no portal.
+3. Teste Pendente > Em andamento > Resolvido.
+4. Reabra um item resolvido e confirme que a justificativa é obrigatória.
+5. Adicione observação, PDF e imagem; confira histórico e download.
+6. Entre com outro usuário autorizado no mesmo evento e confirme que ele também pode
+   atuar no item, com o nome dele registrado na auditoria.
+7. Tente acessar um checklist de evento sem permissão; a API deve negar o acesso.
+8. Arquive um checklist no Admin e confirme que a página fica somente para consulta.
+
+OBSERVAÇÕES DE SEGURANÇA
+- O mesmo login do portal é reutilizado; não há cadastro paralelo de usuários.
+- O acesso é validado no Worker em cada operação, não apenas na interface.
+- Arquivos não recebem URL pública permanente.
+- Cada observação e alteração de status gera um novo registro de auditoria.
+- A interface não oferece edição ou exclusão do histórico.
+- O horário gravado é o horário do servidor (CURRENT_TIMESTAMP do D1).

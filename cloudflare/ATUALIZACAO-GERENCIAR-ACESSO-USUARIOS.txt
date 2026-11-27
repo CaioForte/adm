@@ -1,0 +1,23 @@
+ATUALIZAÇÃO — GERENCIAMENTO DE ACESSO DOS USUÁRIOS
+
+O que mudou:
+- No modal de gerenciamento do usuário, é possível selecionar/desmarcar os eventos permitidos.
+- A senha passou a ser opcional nesse modal: deixe os campos vazios para alterar somente os eventos; preencha os dois campos para também trocar a senha.
+- Ao salvar, as sessões do usuário são encerradas para que ele faça login novamente e carregue os acessos atualizados.
+- Usuários comuns não visualizam o menu Usuários e não conseguem abrir essa área pela navegação.
+- O Worker continua bloqueando operações de gerenciamento de usuários para qualquer conta que não seja superadministrador.
+- O administrador principal não pode ter seus privilégios alterados por esse formulário.
+
+Arquivos alterados:
+- index.html
+- js/main-v62.js
+- cloudflare/worker.js
+
+Aplicação:
+1. Publique index.html e js/main-v62.js no Cloudflare Pages.
+2. Atualize e publique cloudflare/worker.js no Worker.
+3. Não execute SQL: esta atualização não altera o esquema nem exige migração no D1.
+4. Faça login como administrador principal, abra Usuários e clique em GERENCIAR ACESSO.
+5. Selecione os eventos permitidos. Para alterar somente os eventos, deixe os campos de senha vazios.
+
+Validações realizadas localmente: sintaxe JavaScript do frontend e do Worker (node --check).

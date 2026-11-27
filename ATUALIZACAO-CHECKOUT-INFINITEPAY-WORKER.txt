@@ -1,0 +1,26 @@
+ATUALIZAÇÃO — CHECKOUT INFINITEPAY NO CLOUDFLARE WORKER
+
+O QUE MUDOU
+- O cadastro manual de inscrição gera checkout InfinitePay diretamente pelo Cloudflare Worker quando não é cortesia.
+- A URL e o order_nsu são gravados na tabela registrations do D1.
+- O modal Ver detalhes exibe Abrir checkout e Copiar link.
+- Se a geração automática falhar, a inscrição permanece cadastrada; o modal apresenta Gerar checkout para nova tentativa.
+- Cortesias não geram checkout.
+- O webhook de pagamento agora recebe em /webhooks/infinitepay, atualiza o pagamento no D1 e solicita o e-mail de confirmação ao Apps Script.
+- O Apps Script continua gerenciando anexos e, temporariamente, o envio dos e-mails de confirmação.
+- A validação do evento consulta a tabela events do D1, sem lista fixa MTB2026/TRAIL2026.
+
+PUBLICAÇÃO
+1. Publicar cloudflare/worker.js no Worker itaitinga-mtb-api.
+2. Publicar js/main-v62.js no Cloudflare Pages junto com os demais arquivos do projeto.
+3. No Apps Script, atualizar backend/Codigo.gs e publicar uma nova versão da implantação Web App.
+4. Não é necessário executar SQL. Não são necessários novos secrets: reutiliza GAS_WEBAPP_URL e GAS_UPLOAD_SECRET já configurados.
+
+CONFIGURAÇÕES OPCIONAIS DO WORKER
+- INFINITEPAY_HANDLE: padrão caioforte.
+- WORKER_PUBLIC_URL: padrão https://itaitinga-mtb-api.caio-ti.workers.dev.
+- MTB_PAYMENT_URL: página de retorno do MTB (padrão atual 2026).
+- TRAIL_PAYMENT_URL: página de retorno do Trail Run (padrão atual).
+
+ATENÇÃO
+A chamada real à InfinitePay e o recebimento do webhook precisam ser validados após publicar. Os testes locais verificam sintaxe e integridade dos arquivos, não simulam transações reais.

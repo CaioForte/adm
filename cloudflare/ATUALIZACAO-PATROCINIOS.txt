@@ -1,0 +1,13 @@
+ATUALIZAÇÃO - PATROCÍNIOS E COMPROVANTES
+
+1. Como a tabela de patrocínios já foi criada na atualização anterior, execute agora UMA ÚNICA VEZ o arquivo migracao-comprovantes-patrocinios.sql no D1.
+2. Publique backend/Codigo.gs e backend/Despesas.gs no projeto Google Apps Script e atualize a implantação do Web App. Mantenha a propriedade CLOUDFLARE_UPLOAD_SECRET já utilizada pelo Worker.
+3. Publique o Worker atualizado (cloudflare/worker.js).
+4. Publique os arquivos do frontend (index.html, css/styles.css e js/main-v62.js).
+5. Entre no painel, selecione um evento e abra Patrocínios.
+
+A tela permite cadastrar, editar e excluir recebimentos. O modal foi redesenhado e agora permite anexar comprovante opcional em PDF, JPG ou PNG, com limite de 5 MB. Os arquivos são armazenados no Google Drive, em uma pasta PATROCINIOS-<EVENTO>, e os metadados ficam vinculados ao recebimento no D1. O comprovante existente é mantido ao editar sem selecionar um novo arquivo.
+
+Os recebimentos continuam isolados por evento. O resumo financeiro soma os patrocínios às inscrições pagas e considera esse total no saldo líquido e no resultado projetado.
+
+IMPORTANTE: não execute migracao-patrocinios.sql novamente. A migração nova é somente migracao-comprovantes-patrocinios.sql e deve ser executada uma única vez.

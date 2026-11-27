@@ -1,0 +1,34 @@
+ATUALIZAÇÃO — CADASTRO DE INSCRIÇÕES NO D1 + DOCUMENTOS POR CATEGORIA
+
+O que foi alterado
+- A ação cadastrarInscricao agora é enviada ao Cloudflare Worker e gravada no D1.
+- O cadastro valida sessão, evento, categoria ativa, CPF duplicado, valor e cortesia.
+- A categoria define os documentos obrigatórios usando o campo documentosObrigatorios já existente.
+- O formulário exibe um campo de arquivo para cada documento exigido.
+- Formatos aceitos: PDF, JPG, PNG e WEBP. Limite: 5 MB por arquivo.
+- Os arquivos continuam privados no Google Drive, enviados pelo Worker usando o segredo interno já configurado.
+- O D1 armazena o vínculo do documento com a inscrição. A visualização e o download passam pelo Worker, com validação de sessão e vínculo.
+- A consulta de detalhes da inscrição passa a retornar os documentos enviados.
+
+Publicação
+1. Cloudflare Worker: publicar cloudflare/worker.js.
+2. Apps Script: atualizar backend/Codigo.gs e publicar uma nova versão do Web App.
+3. Cloudflare Pages: publicar os arquivos do projeto, incluindo index.html, js/main-v62.js e css/styles.css.
+
+Configuração
+- Reutiliza GAS_WEBAPP_URL, GAS_UPLOAD_SECRET e a propriedade CLOUDFLARE_UPLOAD_SECRET já existentes.
+- Não criar novos secrets.
+- Não executar SQL nem recriar tabelas. A atualização utiliza registrations e registration_documents já existentes.
+- Não configurar R2. Os anexos continuam no Google Drive.
+
+Validação recomendada após publicar
+1. Entrar no painel e selecionar MTB2026.
+2. Abrir Categorias e conferir uma categoria que exija documento (por exemplo, RG).
+3. Cadastrar uma inscrição nessa categoria sem anexo: o formulário deve impedir o cadastro.
+4. Anexar o documento e cadastrar: a inscrição deve aparecer na listagem.
+5. Abrir os detalhes e testar Visualizar e Baixar.
+6. Repetir com uma categoria sem documentos obrigatórios: não deve aparecer campo de anexo.
+7. Repetir no TRAIL2026 para confirmar o isolamento por evento.
+
+Importante
+- O cadastro administrativo de inscrições foi migrado nesta etapa. Outras ações do ciclo de vida da inscrição (alterar pagamento/status, anexar comprovante de pagamento e demais operações) não foram migradas por esta atualização e permanecem no fluxo já existente.

@@ -1,0 +1,18 @@
+ATUALIZAÇÃO — CADASTRO DE EVENTOS
+
+1. Antes de publicar, execute UMA ÚNICA VEZ no D1 existente o arquivo migracao-cadastro-eventos.sql.
+   Ele apenas adiciona start_date e maps_url à tabela events; não apaga nem recria dados.
+2. Publique index.html, js/main-v62.js e css/styles.css no Cloudflare Pages.
+3. Publique cloudflare/worker.js no Cloudflare Worker.
+4. Entre com o administrador principal e acesse Administração > Eventos.
+
+Regras:
+- Somente o administrador principal pode listar, criar, editar e ativar/desativar eventos pela API administrativa.
+- O código é o identificador permanente do evento e não pode ser alterado depois da criação.
+- Tipos aceitos nesta etapa: MTB e TRAIL.
+- A data de início das inscrições é apenas informativa para o site. A abertura/fechamento real continua sendo controlada pelos lotes.
+- Desativar um evento não exclui inscrições nem outros dados vinculados.
+- Esta etapa cria o cadastro administrativo; a leitura pública pelos sites será integrada depois de analisarmos o fluxo atual de inscrição.
+
+ATENÇÃO SOBRE A PRÓXIMA ETAPA:
+O Worker atual ainda contém validações específicas para os códigos MTB2026 e TRAIL2026 em partes do fluxo de inscrições, checkout e despesas. Portanto, o cadastro de novos códigos já ficará disponível no painel, mas novos eventos ainda não devem receber inscrições até concluirmos a generalização desses módulos e conectarmos os sites públicos. Esta atualização não altera o Apps Script nem o fluxo atual de pagamento/retorno.

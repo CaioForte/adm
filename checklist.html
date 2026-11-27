@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#12251f">
+  <title>Checklist | Itaitinga MTB Race</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="stylesheet" href="/css/checklist.css?v=20261127-1">
+</head>
+<body>
+  <main id="loginView" class="login-view" hidden>
+    <section class="login-card">
+      <div class="brand-mark">IM</div>
+      <p class="eyebrow">ITAITINGA MTB RACE</p>
+      <h1>Acesse seu checklist</h1>
+      <p class="muted">Entre com o mesmo usuário e senha utilizados no portal.</p>
+      <form id="loginForm">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" autocomplete="username" required placeholder="seu@email.com">
+        <label for="password">Senha</label>
+        <input id="password" type="password" autocomplete="current-password" required placeholder="Sua senha">
+        <p id="loginError" class="error" hidden></p>
+        <button class="btn btn-primary btn-full" type="submit">Entrar no checklist</button>
+      </form>
+      <p class="footnote">Acesso protegido pela conta do portal.</p>
+    </section>
+  </main>
+
+  <main id="appView" class="app-view" hidden>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Itaitinga MTB Race"><span class="brand-mark small">IM</span><span><b>ITAITINGA</b><small>MTB RACE · CHECKLISTS</small></span></a>
+      <div class="user-area"><span id="userName"></span><button id="logoutBtn" class="btn btn-ghost">Sair</button></div>
+    </header>
+    <div class="page-wrap">
+      <div id="pageError" class="page-error" hidden></div>
+      <section class="checklist-heading">
+        <div>
+          <p class="eyebrow" id="eventName">EVENTO</p>
+          <h1 id="checklistTitle">Carregando checklist...</h1>
+          <p id="checklistDescription" class="muted"></p>
+        </div>
+        <span id="checklistState" class="state-pill">Carregando</span>
+      </section>
+      <section class="progress-card">
+        <div class="progress-top"><div><span class="eyebrow">PROGRESSO GERAL</span><strong id="progressPercent">0%</strong></div><span id="progressText" class="muted">0 de 0 itens resolvidos</span></div>
+        <div class="progress-track"><div id="progressBar" class="progress-fill"></div></div>
+        <div class="stats-row">
+          <div><b id="countPending">0</b><span>Pendentes</span></div>
+          <div><b id="countProgress">0</b><span>Em andamento</span></div>
+          <div><b id="countResolved">0</b><span>Resolvidos</span></div>
+        </div>
+      </section>
+      <section class="items-section">
+        <div class="section-head"><div><p class="eyebrow">ACOMPANHAMENTO</p><h2>Itens do checklist</h2></div><button id="refreshBtn" class="btn btn-outline">↻ Atualizar</button></div>
+        <div class="filters" role="group" aria-label="Filtrar itens">
+          <button class="filter active" data-filter="all">Todos</button>
+          <button class="filter" data-filter="pending">Pendentes</button>
+          <button class="filter" data-filter="in_progress">Em andamento</button>
+          <button class="filter" data-filter="resolved">Resolvidos</button>
+        </div>
+        <div id="itemsList" class="items-list"><div class="loading-card">Carregando itens...</div></div>
+        <p id="archivedNote" class="archived-note" hidden>Este checklist está arquivado. O histórico continua disponível, mas novas alterações estão bloqueadas.</p>
+      </section>
+    </div>
+  </main>
+
+  <div id="itemModal" class="modal" hidden>
+    <section class="modal-card item-modal-card" role="dialog" aria-modal="true" aria-labelledby="modalItemTitle">
+      <header class="modal-head"><div><p class="eyebrow">DETALHES DO ITEM</p><h2 id="modalItemTitle"></h2></div><button class="icon-btn" id="closeItemModal" aria-label="Fechar">×</button></header>
+      <div class="modal-content">
+        <div class="status-actions" id="statusActions">
+          <button class="status-action pending" data-status="pending">Pendente</button>
+          <button class="status-action progress" data-status="in_progress">Em andamento</button>
+          <button class="status-action resolved" data-status="resolved">Resolver item</button>
+        </div>
+        <div id="reopenWrap" class="field" hidden><label for="reopenReason">Justificativa para reabrir</label><textarea id="reopenReason" rows="2" placeholder="Explique por que o item está sendo reaberto..."></textarea></div>
+        <section class="detail-block"><div class="detail-title"><h3>Observações</h3><span class="muted">Registro permanente</span></div><form id="observationForm"><textarea id="observationText" rows="3" maxlength="3000" placeholder="Adicione uma atualização, informação ou orientação..."></textarea><div class="form-foot"><small>Até 3.000 caracteres</small><button class="btn btn-primary" type="submit">Adicionar observação</button></div></form></section>
+        <section class="detail-block"><div class="detail-title"><h3>Anexos</h3><span class="muted">PDF, JPG ou PNG · até 5 MB</span></div><form id="uploadForm" class="upload-row"><input id="attachmentFile" type="file" accept="application/pdf,image/jpeg,image/png"><button class="btn btn-outline" type="submit">Enviar anexo</button></form><div id="attachmentsList" class="attachments-list"></div></section>
+        <section class="detail-block"><div class="detail-title"><h3>Histórico de auditoria</h3><span class="muted">Mais recentes primeiro</span></div><div id="historyList" class="history-list"><p class="muted">Carregando histórico...</p></div></section>
+      </div>
+    </section>
+  </div>
+  <div id="previewModal" class="modal preview-modal" hidden><section class="modal-card preview-card" role="dialog" aria-modal="true"><header class="modal-head"><h2 id="previewTitle">Anexo</h2><button class="icon-btn" id="closePreview" aria-label="Fechar">×</button></header><div id="previewBody" class="preview-body"></div><footer class="preview-footer"><button id="downloadPreview" class="btn btn-primary">Baixar arquivo</button></footer></section></div>
+  <script src="/js/checklist.js?v=20261127-1"></script>
+</body>
+</html>
