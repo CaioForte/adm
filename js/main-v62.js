@@ -1687,8 +1687,8 @@ function exportarInscricoes_() {
   const cabecalho =
     chaves.map(
       chave =>
-        campos[chave]?.titulo ||
-        chave
+        (campos[chave]?.titulo || chave)
+          .toLocaleUpperCase("pt-BR")
     );
 
 
@@ -1711,7 +1711,10 @@ function exportarInscricoes_() {
         }
 
 
-        return valor;
+        // A conversão é aplicada somente ao arquivo exportado;
+        // os dados originais armazenados no sistema permanecem inalterados.
+        return String(valor ?? "")
+          .toLocaleUpperCase("pt-BR");
 
       })
 
