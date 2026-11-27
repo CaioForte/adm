@@ -1,7 +1,24 @@
 (() => {
   const API = "https://itaitinga-mtb-api.caio-ti.workers.dev";
   const SESSION_KEY = "mtbChecklistSession";
-  const checklistId = Number((location.pathname.match(/\/checklist\/(\d+)/i) || [])[1]);
+  // Aceita o link amigável /checklist/15 e também URLs diretas com query string.
+  // A segunda forma é útil em ambientes Pages cujo roteamento ainda não aplicou _redirects.
+  function obterChecklistIdDaUrl() {
+    const pathname = decodeURIComponent(location.pathname || "");
+    const pathMatch = pathname.match(/(?:^|\/)checklist(?:\.html)?\/(\d+)(?:\/|$)/i);
+    if (pathMatch) return Number(pathMatch[1]);
+    const params = new URLSearchParams(location.search || "");
+    const queryId = params.get("checklist_id") || params.get("checklistId") || params.get("id");
+    if (queryId && /^\d+$/.test(queryId)) return Number(queryId);
+    // Compatibilidade com instalações que publicam a página em uma subpasta.
+    const segments = pathname.split("/").filter(Boolean);
+    const checklistIndex = segments.findIndex(part => /^checklist(?:\.html)?$/i.test(part));
+    if (checklistIndex >= 0 && /^\d+$/.test(segments[checklistIndex + 1] || "")) {
+      return Number(segments[checklistIndex + 1]);
+    }
+    return 0;
+  }
+  const checklistId = obterChecklistIdDaUrl();
   const $ = id => document.getElementById(id);
   let session = null, checklist = null, items = [], activeItem = null, filter = "all", previewBlobUrl = null, previewName = "anexo";
   const statusLabels = {pending:"Pendente",in_progress:"Em andamento",resolved:"Resolvido"};

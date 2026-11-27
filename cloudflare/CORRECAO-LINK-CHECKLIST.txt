@@ -1,0 +1,22 @@
+CORREÇÃO - IDENTIFICAÇÃO DO CHECKLIST PELO LINK
+
+Esta atualização corrige a leitura do identificador do checklist na página independente.
+A página agora aceita:
+- /checklist/15
+- /checklist/15/
+- /checklist.html/15
+- /checklist.html?id=15
+- /checklist.html?checklist_id=15
+
+O Worker, a migração D1 e a integração com Google Apps Script/Drive não foram alterados.
+
+PUBLICAÇÃO
+1. Substitua no Cloudflare Pages os arquivos checklist.html e js/checklist.js.
+2. Confirme que o arquivo _redirects está na raiz publicada do Pages e contém:
+   /checklist/* /checklist.html 200
+3. Não publique novamente o Worker.
+4. Não execute migração D1.
+
+TESTE
+Abra pelo botão ABRIR LINK no Admin. O endereço deve terminar com /checklist/ID.
+Se estiver testando diretamente, também pode abrir /checklist.html?id=ID.
