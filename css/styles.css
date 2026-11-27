@@ -3492,3 +3492,247 @@ h1{
 }
 /* Link de execução individual dos checklists */
 .checklist-actions a.action{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}
+
+/* =====================================================
+   REFINO VISUAL — MODAIS DE CHECKLISTS E PATROCÍNIOS
+   Botões com hierarquia consistente e comportamento responsivo.
+   ===================================================== */
+#checklistModal.modal-backdrop,
+#sponsorshipModal.modal-backdrop {
+    padding: clamp(10px, 2.5vw, 24px);
+    align-items: center;
+}
+#checklistModal .checklist-modal,
+#sponsorshipModal .sponsorship-modal {
+    display: flex;
+    flex-direction: column;
+    width: min(860px, 100%);
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 20px;
+}
+#checklistModal .modal-head,
+#sponsorshipModal .sponsorship-modal-head {
+    flex: 0 0 auto;
+}
+#checklistModal .checklist-form,
+#sponsorshipModal .sponsorship-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Checklist: rodapé e ações */
+#checklistModal .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+#checklistModal .form-actions button,
+#sponsorshipModal .sponsorship-modal-footer button {
+    width: auto;
+    min-width: 132px;
+    min-height: 43px;
+    margin: 0;
+    padding: 0 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 850;
+    letter-spacing: .045em;
+    white-space: nowrap;
+    transition: background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .15s ease;
+}
+#checklistModal #cancelChecklist,
+#sponsorshipModal #cancelSponsorship {
+    border: 1px solid #dce3e6;
+    background: #fff;
+    color: #58666d;
+    box-shadow: 0 1px 2px rgba(20,35,42,.04);
+}
+#checklistModal #cancelChecklist:hover,
+#sponsorshipModal #cancelSponsorship:hover {
+    border-color: #c7d1d5;
+    background: #f5f7f8;
+    color: #26343a;
+}
+#checklistModal #saveChecklist,
+#sponsorshipModal #saveSponsorship {
+    border: 1px solid #2f8736;
+    background: #328d39;
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(50,141,57,.18);
+}
+#checklistModal #saveChecklist:hover,
+#sponsorshipModal #saveSponsorship:hover {
+    border-color: #287a30;
+    background: #287f31;
+    box-shadow: 0 7px 18px rgba(50,141,57,.24);
+    transform: translateY(-1px);
+}
+#checklistModal .form-actions button:active,
+#sponsorshipModal .sponsorship-modal-footer button:active {
+    transform: translateY(1px);
+}
+#checklistModal .form-actions button:disabled,
+#sponsorshipModal .sponsorship-modal-footer button:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+#checklistModal #addChecklistItemBtn {
+    width: auto;
+    min-height: 38px;
+    margin: 0;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #cfe0cf;
+    border-radius: 9px;
+    background: #f3f9f2;
+    color: #367b39;
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .035em;
+    white-space: nowrap;
+}
+#checklistModal #addChecklistItemBtn:hover {
+    border-color: #a9cba9;
+    background: #eaf5e9;
+}
+#checklistModal .checklist-item-toggle {
+    min-height: 34px;
+    padding: 0 11px;
+    border: 1px solid #dce3e6;
+    border-radius: 8px;
+    background: #fff;
+    color: #5c6970;
+    font-size: 10px;
+    font-weight: 750;
+}
+#checklistModal .checklist-item-toggle:hover {
+    border-color: #c7d5c8;
+    background: #f4f8f3;
+}
+
+/* Patrocínios: corrigir a herança de largura total do botão .primary */
+#sponsorshipModal .sponsorship-modal-footer {
+    flex: 0 0 auto;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 17px;
+}
+#sponsorshipModal .sponsorship-modal-footer #saveSponsorship {
+    justify-content: center;
+}
+#sponsorshipModal .sponsorship-modal-footer #cancelSponsorship {
+    justify-content: center;
+}
+#sponsorshipModal .sponsorship-upload {
+    min-width: 0;
+}
+#sponsorshipModal .sponsorship-upload-action {
+    flex: 0 0 auto;
+}
+
+/* Tablets e celulares */
+@media (max-width: 720px) {
+    #checklistModal.modal-backdrop,
+    #sponsorshipModal.modal-backdrop {
+        padding: 9px;
+        align-items: center;
+    }
+    #checklistModal .checklist-modal,
+    #sponsorshipModal .sponsorship-modal {
+        width: 100%;
+        max-height: calc(100vh - 18px);
+        max-height: calc(100dvh - 18px);
+        border-radius: 16px;
+    }
+    #checklistModal .modal-head,
+    #sponsorshipModal .sponsorship-modal-head {
+        padding: 17px 18px;
+    }
+    #checklistModal .modal-head h2,
+    #sponsorshipModal .modal-head h2 {
+        font-size: 21px;
+        line-height: 1.2;
+    }
+    #checklistModal .checklist-form,
+    #sponsorshipModal .sponsorship-modal-body {
+        padding: 17px 18px 19px;
+    }
+    #checklistModal .checklist-items-head {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 11px;
+    }
+    #checklistModal #addChecklistItemBtn {
+        align-self: flex-start;
+    }
+    #checklistModal .checklist-item-row {
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 8px;
+    }
+    #checklistModal .checklist-item-toggle {
+        grid-column: 2;
+        justify-self: start;
+    }
+    #checklistModal .form-actions,
+    #sponsorshipModal .sponsorship-modal-footer {
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 9px;
+    }
+    #checklistModal .form-actions button,
+    #sponsorshipModal .sponsorship-modal-footer button {
+        width: 100%;
+        min-height: 44px;
+    }
+    #sponsorshipModal .sponsorship-form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    #sponsorshipModal .sponsorship-field-wide {
+        grid-column: auto;
+    }
+    #sponsorshipModal .sponsorship-upload {
+        flex-wrap: wrap;
+    }
+    #sponsorshipModal .sponsorship-upload-action {
+        margin-left: 49px;
+    }
+}
+@media (max-width: 380px) {
+    #checklistModal .modal-head,
+    #sponsorshipModal .sponsorship-modal-head {
+        padding: 15px;
+    }
+    #checklistModal .checklist-form,
+    #sponsorshipModal .sponsorship-modal-body {
+        padding: 15px;
+    }
+    #sponsorshipModal .sponsorship-title-wrap {
+        padding-left: 52px;
+    }
+    #sponsorshipModal .sponsorship-title-wrap:before {
+        width: 40px;
+        height: 40px;
+    }
+}
