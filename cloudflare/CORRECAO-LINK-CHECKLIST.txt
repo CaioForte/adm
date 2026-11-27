@@ -1,22 +1,20 @@
-CORREÇÃO - IDENTIFICAÇÃO DO CHECKLIST PELO LINK
+CORREÇÃO DO LINK DE ACESSO AO CHECKLIST
 
-Esta atualização corrige a leitura do identificador do checklist na página independente.
-A página agora aceita:
-- /checklist/15
-- /checklist/15/
-- /checklist.html/15
-- /checklist.html?id=15
-- /checklist.html?checklist_id=15
+O endereço /checklist/ID depende de um rewrite de rota. No ambiente atual hospedado em workers.dev, o roteamento pode entregar checklist.html sem preservar o trecho /ID na URL do navegador.
 
-O Worker, a migração D1 e a integração com Google Apps Script/Drive não foram alterados.
+Para evitar perder o identificador, o botão ABRIR LINK do Admin agora gera o formato direto:
+/checklist.html?id=15
+
+O JavaScript da página lê o ID pelo parâmetro id da query string. Assim, o identificador permanece disponível mesmo quando a página de login é exibida e após o envio do formulário.
 
 PUBLICAÇÃO
-1. Substitua no Cloudflare Pages os arquivos checklist.html e js/checklist.js.
-2. Confirme que o arquivo _redirects está na raiz publicada do Pages e contém:
-   /checklist/* /checklist.html 200
-3. Não publique novamente o Worker.
-4. Não execute migração D1.
+1. Substitua js/main-v62.js no frontend do Admin.
+2. Publique também index.html para atualizar o cache-busting do JavaScript.
+3. Mantenha checklist.html e js/checklist.js da versão de correção anterior, que já aceitam ?id=15.
+4. Não precisa publicar o Worker nem executar migração D1 para esta alteração.
 
 TESTE
-Abra pelo botão ABRIR LINK no Admin. O endereço deve terminar com /checklist/ID.
-Se estiver testando diretamente, também pode abrir /checklist.html?id=ID.
+No Admin, clique em ABRIR LINK. O endereço esperado será:
+https://adm.caio-ti.workers.dev/checklist.html?id=2
+
+O número após id= deve ser o ID real do checklist.

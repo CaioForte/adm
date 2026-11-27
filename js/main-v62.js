@@ -5029,7 +5029,7 @@ async function inicializarEstadoCidadeCadastroAdmin_() {
     }
     try {
       if (!cidadesPorEstado) {
-        const resposta = await fetch("cidades.json");
+        const resposta = await fetch("js/cidades.json");
         if (!resposta.ok) throw new Error("Não foi possível carregar cidades.json");
         cidadesPorEstado = await resposta.json();
       }
