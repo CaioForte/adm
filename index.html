@@ -1251,6 +1251,15 @@
             <input id="newDataNascimento" type="date">
           </label>
 
+          <label class="registration-field" id="newSexoField" hidden>
+            <small>SEXO *</small>
+            <select id="newSexo" disabled>
+              <option value="">Selecione</option>
+              <option value="MASCULINO">Masculino</option>
+              <option value="FEMININO">Feminino</option>
+            </select>
+          </label>
+
           <label class="registration-field">
             <small>ESTADO (UF)</small>
             <select id="newEstado" autocomplete="address-level1">
@@ -1264,6 +1273,52 @@
               <option value="">Selecione primeiro o estado</option>
             </select>
           </label>
+
+          <section id="duplaAthleteFields" class="registration-field wide" hidden style="border:1px solid var(--border,#d9d9d9);border-radius:12px;padding:16px;margin:8px 0;">
+            <div style="font-weight:800;margin-bottom:12px;">SEGUNDO ATLETA DA DUPLA</div>
+            <div class="registration-grid">
+              <label class="registration-field wide">
+                <small>NOME COMPLETO *</small>
+                <input id="newNome2" type="text" maxlength="120" placeholder="Nome completo" disabled>
+              </label>
+              <label class="registration-field">
+                <small>CPF *</small>
+                <input id="newCpf2" type="text" maxlength="14" placeholder="000.000.000-00" inputmode="numeric" disabled>
+              </label>
+              <label class="registration-field">
+                <small>SEXO *</small>
+                <select id="newSexo2" disabled>
+                  <option value="">Selecione</option>
+                  <option value="MASCULINO">Masculino</option>
+                  <option value="FEMININO">Feminino</option>
+                </select>
+              </label>
+              <label class="registration-field">
+                <small>E-MAIL *</small>
+                <input id="newEmail2" type="email" maxlength="150" placeholder="atleta@email.com" disabled>
+              </label>
+              <label class="registration-field">
+                <small>WHATSAPP *</small>
+                <input id="newTelefone2" type="text" maxlength="20" placeholder="(85) 99999-9999" inputmode="tel" disabled>
+              </label>
+              <label class="registration-field">
+                <small>DATA DE NASCIMENTO *</small>
+                <input id="newDataNascimento2" type="date" disabled>
+              </label>
+              <label class="registration-field">
+                <small>ESTADO (UF) *</small>
+                <select id="newEstado2" disabled>
+                  <option value="">Selecione o estado</option>
+                </select>
+              </label>
+              <label class="registration-field">
+                <small>CIDADE *</small>
+                <select id="newCidade2" disabled>
+                  <option value="">Selecione primeiro o estado</option>
+                </select>
+              </label>
+            </div>
+          </section>
 
           <label class="registration-field">
             <small>VALOR (AUTOMÁTICO CONFORME CATEGORIA E LOTE)</small>
