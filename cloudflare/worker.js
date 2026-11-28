@@ -1473,9 +1473,10 @@ async function cadastrarInscricaoD1(request, env) {
   const cortesia = body.cortesia === true || String(body.cortesia || "").toLowerCase() === "true";
   if (!nome || !email || !categoriaNome || cpf.length !== 11 || !/^\d{11}$/.test(cpf)) return resposta({sucesso:false,mensagem:"Preencha os dados obrigatórios e informe um CPF válido."},400);
   if (!validarCpfWorker(cpf)) return resposta({sucesso:false,mensagem:"CPF inválido. Informe um CPF válido com 11 dígitos."},400);
-  const categoria = await env.DB.prepare(`SELECT id,name,required_documents,is_local FROM categories WHERE event_id=? AND active=1 AND lower(name)=lower(?) LIMIT 1`).bind(evento,categoriaNome).first();
+  const categoria = await env.DB.prepare(`SELECT id,name,required_documents,is_local,participation_type,composition FROM categories WHERE event_id=? AND active=1 AND lower(name)=lower(?) LIMIT 1`).bind(evento,categoriaNome).first();
   if (!categoria) return resposta({sucesso:false,mensagem:"Categoria não encontrada ou inativa para o evento selecionado."},404);
   const categoriaLocal = Number(categoria.is_local) === 1;
+  const categoriaDupla = String(categoria.participation_type || "INDIVIDUAL").toUpperCase() === "DUPLA";
   const obrigatorios = documentosCategoria(categoria.required_documents);
   if (categoriaLocal && !obrigatorios.includes("COMPROVANTE_RESIDENCIA")) obrigatorios.push("COMPROVANTE_RESIDENCIA");
   let valor = 0;
@@ -1483,14 +1484,16 @@ async function cadastrarInscricaoD1(request, env) {
   if (!cortesia) {
     const partesHoje = new Intl.DateTimeFormat("en-US", { timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
     const hojeFortaleza = `${partesHoje.find(p => p.type === "year").value}-${partesHoje.find(p => p.type === "month").value}-${partesHoje.find(p => p.type === "day").value}`;
-    const lote = await env.DB.prepare(`SELECT id,name,general_amount_cents,local_amount_cents,amount_cents FROM batches WHERE event_id=? AND active=1 AND date(start_date)<=date(?) AND date(end_date)>=date(?) ORDER BY date(start_date) DESC, created_at DESC LIMIT 1`).bind(evento,hojeFortaleza,hojeFortaleza).first();
+    const lote = await env.DB.prepare(`SELECT id,name,general_amount_cents,local_amount_cents,double_amount_cents,amount_cents FROM batches WHERE event_id=? AND active=1 AND date(start_date)<=date(?) AND date(end_date)>=date(?) ORDER BY date(start_date) DESC, created_at DESC LIMIT 1`).bind(evento,hojeFortaleza,hojeFortaleza).first();
     if (!lote) return resposta({sucesso:false,mensagem:"Não existe lote ativo para este evento na data de hoje. Verifique a vigência dos lotes."},400);
-    const valorCentavos = categoriaLocal
-      ? Number(lote.local_amount_cents ?? lote.general_amount_cents ?? lote.amount_cents ?? 0)
-      : Number(lote.general_amount_cents ?? lote.amount_cents ?? 0);
+    const valorCentavos = categoriaDupla
+      ? Number(lote.double_amount_cents ?? lote.general_amount_cents ?? lote.amount_cents ?? 0)
+      : (categoriaLocal
+        ? Number(lote.local_amount_cents ?? lote.general_amount_cents ?? lote.amount_cents ?? 0)
+        : Number(lote.general_amount_cents ?? lote.amount_cents ?? 0));
     if (!Number.isFinite(valorCentavos) || valorCentavos <= 0) return resposta({sucesso:false,mensagem:"O lote vigente não possui um valor válido para esta categoria."},400);
     valor = valorCentavos / 100;
-    loteAplicado = { id: lote.id, nome: lote.name, tipoValor: categoriaLocal ? "local" : "geral" };
+    loteAplicado = { id: lote.id, nome: lote.name, tipoValor: categoriaDupla ? "dupla" : (categoriaLocal ? "local" : "geral") };
   }
   const documentos = Array.isArray(body.documentos) ? body.documentos : [];
   const porTipo = new Map(documentos.map(d => [String(d.tipo || "").trim().toUpperCase(), d]));
@@ -1950,12 +1953,14 @@ async function gerenciarCatalogo(request, env) {
   try {
     if (acao === "adminCategorias" || acao === "listarCategorias") {
       const result = await env.DB.prepare(`
-        SELECT id, name, max_age, required_documents, is_local, active, created_at
+        SELECT id, name, max_age, required_documents, is_local, participation_type, composition, active, created_at
         FROM categories WHERE event_id = ? ORDER BY name COLLATE NOCASE
       `).bind(evento).all();
       const categorias = (result.results || []).map(x => ({
         id: x.id, nome: x.name, idadeMaxima: x.max_age == null ? null : Number(x.max_age),
-        ativo: Number(x.active) === 1, local: Number(x.is_local) === 1, criadoEm: x.created_at || "", evento,
+        ativo: Number(x.active) === 1, local: Number(x.is_local) === 1,
+        tipoParticipacao: x.participation_type || "INDIVIDUAL", composicao: x.composition || "LIVRE",
+        criadoEm: x.created_at || "", evento,
         documentosObrigatorios: documentosCategoria(x.required_documents)
       }));
       return resposta({ sucesso: true, dados: { evento, categorias } });
@@ -1964,7 +1969,7 @@ async function gerenciarCatalogo(request, env) {
     if (acao === "lotes") {
       const result = await env.DB.prepare(`
         SELECT id, name, start_date, end_date, amount_cents,
-               general_amount_cents, local_amount_cents, active, created_at
+               general_amount_cents, local_amount_cents, double_amount_cents, active, created_at
         FROM batches WHERE event_id = ? ORDER BY start_date, created_at
       `).bind(evento).all();
       const lotes = (result.results || []).map(x => ({
@@ -1972,6 +1977,7 @@ async function gerenciarCatalogo(request, env) {
         valor: Number(x.general_amount_cents ?? x.amount_cents ?? 0) / 100,
         valorGeral: Number(x.general_amount_cents ?? x.amount_cents ?? 0) / 100,
         valorLocal: Number(x.local_amount_cents ?? x.general_amount_cents ?? x.amount_cents ?? 0) / 100,
+        valorDupla: Number(x.double_amount_cents ?? x.general_amount_cents ?? x.amount_cents ?? 0) / 100,
         ativo: Number(x.active) === 1,
         criadoEm: x.created_at || "", evento
       }));
@@ -1984,6 +1990,12 @@ async function gerenciarCatalogo(request, env) {
       const idadeRaw = body.idadeMaxima;
       const idade = idadeRaw === "" || idadeRaw == null ? null : Number(idadeRaw);
       const local = body.local === true || Number(body.local) === 1;
+      const tipoParticipacao = String(body.tipoParticipacao || "INDIVIDUAL").toUpperCase();
+      const composicao = String(body.composicao || "LIVRE").toUpperCase();
+      const composicoesValidas = tipoParticipacao === "DUPLA" ? ["MASCULINA", "FEMININA", "MISTA"] : ["LIVRE", "MASCULINA", "FEMININA"];
+      if (!["INDIVIDUAL", "DUPLA"].includes(tipoParticipacao) || !composicoesValidas.includes(composicao)) {
+        return resposta({ sucesso: false, mensagem: "Tipo de participação ou composição inválida." }, 400);
+      }
       const docs = documentosCategoria(body.documentosObrigatorios);
       if (local && !docs.includes("COMPROVANTE_RESIDENCIA")) docs.push("COMPROVANTE_RESIDENCIA");
       if (!nome) return resposta({ sucesso: false, mensagem: "Informe o nome da categoria." }, 400);
@@ -1994,15 +2006,15 @@ async function gerenciarCatalogo(request, env) {
       if (duplicada) return resposta({ sucesso: false, mensagem: "Já existe uma categoria com este nome neste evento." }, 409);
       if (acao === "criarCategoria") {
         const novoId = `CAT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-        await env.DB.prepare(`INSERT INTO categories (id,event_id,name,max_age,required_documents,is_local,active) VALUES (?,?,?,?,?,?,1)`)
-          .bind(novoId, evento, nome, idade, JSON.stringify(docs), local ? 1 : 0).run();
-        return resposta({ sucesso: true, dados: { criado: true, id: novoId, nome, idadeMaxima: idade, local, ativo: true, evento, documentosObrigatorios: docs } });
+        await env.DB.prepare(`INSERT INTO categories (id,event_id,name,max_age,required_documents,is_local,participation_type,composition,active) VALUES (?,?,?,?,?,?,?,?,1)`)
+          .bind(novoId, evento, nome, idade, JSON.stringify(docs), local ? 1 : 0, tipoParticipacao, composicao).run();
+        return resposta({ sucesso: true, dados: { criado: true, id: novoId, nome, idadeMaxima: idade, local, tipoParticipacao, composicao, ativo: true, evento, documentosObrigatorios: docs } });
       }
       if (!id) return resposta({ sucesso: false, mensagem: "Categoria não informada." }, 400);
-      const result = await env.DB.prepare(`UPDATE categories SET name=?, max_age=?, required_documents=?, is_local=? WHERE id=? AND event_id=?`)
-        .bind(nome, idade, JSON.stringify(docs), local ? 1 : 0, id, evento).run();
+      const result = await env.DB.prepare(`UPDATE categories SET name=?, max_age=?, required_documents=?, is_local=?, participation_type=?, composition=? WHERE id=? AND event_id=?`)
+        .bind(nome, idade, JSON.stringify(docs), local ? 1 : 0, tipoParticipacao, composicao, id, evento).run();
       if (!result.meta?.changes) return resposta({ sucesso: false, mensagem: "Categoria não encontrada para o evento selecionado." }, 404);
-      return resposta({ sucesso: true, dados: { atualizado: true, id, nome, idadeMaxima: idade, local, evento, documentosObrigatorios: docs } });
+      return resposta({ sucesso: true, dados: { atualizado: true, id, nome, idadeMaxima: idade, local, tipoParticipacao, composicao, evento, documentosObrigatorios: docs } });
     }
 
     if (acao === "alterarStatusCategoria" || acao === "alterarStatusLote") {
@@ -2032,24 +2044,27 @@ async function gerenciarCatalogo(request, env) {
       // Compatibilidade: chamadas antigas que enviam apenas "valor" usam o mesmo preço nos dois campos.
       const valorGeral = Number(body.valorGeral ?? body.valor);
       const valorLocal = Number(body.valorLocal ?? body.valorGeral ?? body.valor);
+      const valorDupla = Number(body.valorDupla ?? body.valorGeral ?? body.valor);
       if (!nome) return resposta({ sucesso: false, mensagem: "Informe o nome do lote." }, 400);
       if (!inicio || !fim) return resposta({ sucesso: false, mensagem: "Informe a vigência do lote." }, 400);
       if (inicio > fim) return resposta({ sucesso: false, mensagem: "A data inicial não pode ser maior que a data final." }, 400);
       if (!Number.isFinite(valorGeral) || valorGeral <= 0) return resposta({ sucesso: false, mensagem: "Informe um valor válido para a inscrição geral." }, 400);
       if (!Number.isFinite(valorLocal) || valorLocal <= 0) return resposta({ sucesso: false, mensagem: "Informe um valor válido para a inscrição local." }, 400);
+      if (!Number.isFinite(valorDupla) || valorDupla <= 0) return resposta({ sucesso: false, mensagem: "Informe um valor válido para a inscrição de dupla." }, 400);
       const geralCentavos = Math.round(valorGeral * 100);
       const localCentavos = Math.round(valorLocal * 100);
+      const duplaCentavos = Math.round(valorDupla * 100);
       if (acao === "criarLote") {
         const novoId = `LOTE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-        await env.DB.prepare(`INSERT INTO batches (id,event_id,name,start_date,end_date,amount_cents,general_amount_cents,local_amount_cents,active) VALUES (?,?,?,?,?,?,?,?,1)`)
-          .bind(novoId, evento, nome, inicio, fim, geralCentavos, geralCentavos, localCentavos).run();
-        return resposta({ sucesso: true, dados: { criado: true, id: novoId, nome, dataInicio: inicio, dataFim: fim, valor: valorGeral, valorGeral, valorLocal, ativo: true, evento } });
+        await env.DB.prepare(`INSERT INTO batches (id,event_id,name,start_date,end_date,amount_cents,general_amount_cents,local_amount_cents,double_amount_cents,active) VALUES (?,?,?,?,?,?,?,?,?,1)`)
+          .bind(novoId, evento, nome, inicio, fim, geralCentavos, geralCentavos, localCentavos, duplaCentavos).run();
+        return resposta({ sucesso: true, dados: { criado: true, id: novoId, nome, dataInicio: inicio, dataFim: fim, valor: valorGeral, valorGeral, valorLocal, valorDupla, ativo: true, evento } });
       }
       if (!id) return resposta({ sucesso: false, mensagem: "Lote não informado." }, 400);
-      const result = await env.DB.prepare(`UPDATE batches SET name=?, start_date=?, end_date=?, amount_cents=?, general_amount_cents=?, local_amount_cents=? WHERE id=? AND event_id=?`)
-        .bind(nome, inicio, fim, geralCentavos, geralCentavos, localCentavos, id, evento).run();
+      const result = await env.DB.prepare(`UPDATE batches SET name=?, start_date=?, end_date=?, amount_cents=?, general_amount_cents=?, local_amount_cents=?, double_amount_cents=? WHERE id=? AND event_id=?`)
+        .bind(nome, inicio, fim, geralCentavos, geralCentavos, localCentavos, duplaCentavos, id, evento).run();
       if (!result.meta?.changes) return resposta({ sucesso: false, mensagem: "Lote não encontrado para o evento selecionado." }, 404);
-      return resposta({ sucesso: true, dados: { atualizado: true, id, nome, dataInicio: inicio, dataFim: fim, valor: valorGeral, valorGeral, valorLocal, evento } });
+      return resposta({ sucesso: true, dados: { atualizado: true, id, nome, dataInicio: inicio, dataFim: fim, valor: valorGeral, valorGeral, valorLocal, valorDupla, evento } });
     }
 
     return resposta({ sucesso: false, mensagem: "Ação de cadastro não reconhecida." }, 400);
@@ -2352,6 +2367,31 @@ export default {
 
 
     try {
+
+      if (url.pathname === "/public/categories" && request.method === "GET") {
+        const evento = String(url.searchParams.get("evento") || "MTB2026").trim().toUpperCase();
+        if (!evento || evento.length > 100) return resposta({ sucesso: false, mensagem: "Evento inválido." }, 400);
+        const result = await env.DB.prepare(`
+          SELECT id, name, max_age, is_local, participation_type, composition
+          FROM categories
+          WHERE event_id = ? AND active = 1
+          ORDER BY name COLLATE NOCASE
+        `).bind(evento).all();
+        const categorias = (result.results || []).map(c => ({
+          id: c.id,
+          name: c.name,
+          type: String(c.participation_type || "INDIVIDUAL") === "DUPLA" ? "Dupla (2 atletas)" : "Individual",
+          isTeam: String(c.participation_type || "INDIVIDUAL") === "DUPLA",
+          participationType: c.participation_type || "INDIVIDUAL",
+          composition: c.composition || "LIVRE",
+          isLocal: Number(c.is_local) === 1,
+          maxAge: c.max_age == null ? null : Number(c.max_age),
+          description: String(c.participation_type || "INDIVIDUAL") === "DUPLA"
+            ? "Inscrição conjunta para dois atletas • Percurso 50 km"
+            : "Categoria individual • Percurso 50 km"
+        }));
+        return resposta({ sucesso: true, dados: { evento, categorias } });
+      }
 
       if (url.pathname === "/health" && request.method === "GET") {
 

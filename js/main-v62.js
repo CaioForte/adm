@@ -3025,7 +3025,9 @@ function atualizarValorCadastroAdmin_() {
     campo.readOnly = true;
     return;
   }
-  const valor = categoria?.local ? lote.valorLocal : lote.valorGeral;
+  const valor = categoria?.tipoParticipacao === "DUPLA"
+    ? lote.valorDupla
+    : (categoria?.local ? lote.valorLocal : lote.valorGeral);
   campo.value = Number(valor || 0).toFixed(2);
   campo.placeholder = "";
   campo.readOnly = true;
@@ -3172,6 +3174,8 @@ function normalizarCategorias_(valor) {
       : Number(x.idadeMaxima),
     ativo: x.ativo === true || String(x.ativo || "").toUpperCase() === "SIM",
     local: x.local === true || Number(x.local) === 1,
+    tipoParticipacao: String(x.tipoParticipacao || "INDIVIDUAL").toUpperCase(),
+    composicao: String(x.composicao || "LIVRE").toUpperCase(),
     documentosObrigatorios: Array.isArray(x.documentosObrigatorios)
       ? x.documentosObrigatorios.map(v => String(v || "").trim()).filter(Boolean)
       : String(x.documentosObrigatorios || "").split("|").map(v => v.trim()).filter(Boolean)
@@ -3201,6 +3205,21 @@ function preencherDocumentosCategoria_(documentos) {
   sincronizarComprovanteCategoriaLocal_();
 }
 
+function atualizarOpcoesComposicaoCategoria_() {
+  const tipo = document.getElementById("categoryType")?.value || "INDIVIDUAL";
+  const select = document.getElementById("categoryComposition");
+  if (!select) return;
+  const atual = select.value;
+  const opcoes = tipo === "DUPLA"
+    ? [["MASCULINA", "Dupla masculina"], ["FEMININA", "Dupla feminina"], ["MISTA", "Dupla mista"]]
+    : [["LIVRE", "Masculino ou feminino"], ["MASCULINA", "Masculina"], ["FEMININA", "Feminina"]];
+  select.innerHTML = opcoes.map(function (item) {
+    return '<option value="' + item[0] + '">' + item[1] + '</option>';
+  }).join("");
+  select.value = opcoes.some(function (item) { return item[0] === atual; }) ? atual : opcoes[0][0];
+}
+document.getElementById("categoryType")?.addEventListener("change", atualizarOpcoesComposicaoCategoria_);
+
 function sincronizarComprovanteCategoriaLocal_() {
   const local = document.getElementById("categoryLocal")?.checked === true;
   const comprovante = document.querySelector('input[name="categoryDocumento"][value="COMPROVANTE_RESIDENCIA"]');
@@ -3218,6 +3237,7 @@ function normalizarLotes_(valor) {
     valor: Number(x.valorGeral ?? x.valor ?? 0),
     valorGeral: Number(x.valorGeral ?? x.valor ?? 0),
     valorLocal: Number(x.valorLocal ?? x.valorGeral ?? x.valor ?? 0),
+    valorDupla: Number(x.valorDupla ?? x.valorGeral ?? x.valor ?? 0),
     ativo: x.ativo === true || String(x.ativo || "").toUpperCase() === "SIM"
   })).filter(x => x.nome);
 }
@@ -3548,11 +3568,12 @@ function renderLotesConfig_() {
 
           <div class="management-price">
 
-            <small>GERAL / LOCAL</small>
+            <small>GERAL / LOCAL / DUPLA</small>
 
             <b>
               R$ ${Number(l.valorGeral).toFixed(2).replace(".", ",")}
               <span class="management-price-secondary">Local: R$ ${Number(l.valorLocal).toFixed(2).replace(".", ",")}</span>
+              <span class="management-price-secondary">Dupla: R$ ${Number(l.valorDupla).toFixed(2).replace(".", ",")}</span>
             </b>
 
           </div>
@@ -3972,6 +3993,7 @@ formatarDataHoraInput_(
 
   document.getElementById("lotValorGeral").value = Number(lote.valorGeral ?? lote.valor ?? 0).toFixed(2);
   document.getElementById("lotValorLocal").value = Number(lote.valorLocal ?? lote.valorGeral ?? lote.valor ?? 0).toFixed(2);
+  document.getElementById("lotValorDupla").value = Number(lote.valorDupla ?? lote.valorGeral ?? lote.valor ?? 0).toFixed(2);
 
   document.getElementById(
     "saveLot"
@@ -4026,9 +4048,10 @@ document.getElementById("lotForm")?.addEventListener("submit", async e => {
 
   const valorGeral = Number(document.getElementById("lotValorGeral").value);
   const valorLocal = Number(document.getElementById("lotValorLocal").value);
+  const valorDupla = Number(document.getElementById("lotValorDupla").value);
 
-  if (!nome || !dataInicio || !dataFim || !Number.isFinite(valorGeral) || valorGeral <= 0 || !Number.isFinite(valorLocal) || valorLocal <= 0) {
-    return mostrarErroConfig_("lotError", "Preencha os dados do lote e informe os dois valores corretamente.");
+  if (!nome || !dataInicio || !dataFim || !Number.isFinite(valorGeral) || valorGeral <= 0 || !Number.isFinite(valorLocal) || valorLocal <= 0 || !Number.isFinite(valorDupla) || valorDupla <= 0) {
+    return mostrarErroConfig_("lotError", "Preencha os dados do lote e informe os três valores corretamente.");
   }
 
   if (dataInicio > dataFim) {
@@ -4070,6 +4093,7 @@ console.log(
     dataFim: dataFim,
     valorGeral,
     valorLocal,
+    valorDupla,
     evento: EVENTO_ATUAL
   }
 );
@@ -4158,6 +4182,7 @@ document
   dataFim,
   valorGeral,
   valorLocal,
+  valorDupla,
   evento: EVENTO_ATUAL
       }
     );
@@ -4195,6 +4220,11 @@ document.getElementById("addCategoryBtn")?.addEventListener("click", () => {
   document.getElementById("categoryForm")?.reset();
   window.categoriaEditandoId = null;
   preencherDocumentosCategoria_([]);
+  const tipo = document.getElementById("categoryType");
+  const composicao = document.getElementById("categoryComposition");
+  if (tipo) tipo.value = "INDIVIDUAL";
+  if (composicao) composicao.value = "LIVRE";
+  atualizarOpcoesComposicaoCategoria_();
   const categoriaLocal = document.getElementById("categoryLocal");
   if (categoriaLocal) categoriaLocal.checked = false;
   sincronizarComprovanteCategoriaLocal_();
@@ -4239,6 +4269,8 @@ document.getElementById("categoryForm")?.addEventListener("submit", async e => {
     if (comprovante) comprovante.checked = true;
   }
   const documentosObrigatorios = documentosCategoriaSelecionados_();
+  const tipoParticipacao = document.getElementById("categoryType")?.value || "INDIVIDUAL";
+  const composicao = document.getElementById("categoryComposition")?.value || "LIVRE";
 
   if (!nome) {
 
@@ -4246,6 +4278,12 @@ document.getElementById("categoryForm")?.addEventListener("submit", async e => {
       "categoryError",
       "Informe o nome da categoria."
     );
+  }
+  if (tipoParticipacao === "DUPLA" && !["MASCULINA", "FEMININA", "MISTA"].includes(composicao)) {
+    return mostrarErroConfig_("categoryError", "Selecione uma composição válida para a categoria de dupla.");
+  }
+  if (tipoParticipacao === "INDIVIDUAL" && composicao === "MISTA") {
+    return mostrarErroConfig_("categoryError", "A composição mista é exclusiva para categorias de dupla.");
   }
 
 
@@ -4321,6 +4359,8 @@ document.getElementById("categoryForm")?.addEventListener("submit", async e => {
     idadeMaxima: idadeMaxima,
     documentosObrigatorios: documentosObrigatorios,
     local: categoriaLocal,
+    tipoParticipacao,
+    composicao,
     evento: EVENTO_ATUAL
   }
       );
@@ -4358,6 +4398,8 @@ document.getElementById("categoryForm")?.addEventListener("submit", async e => {
     idadeMaxima: idadeMaxima,
     documentosObrigatorios: documentosObrigatorios,
     local: categoriaLocal,
+    tipoParticipacao,
+    composicao,
     evento: EVENTO_ATUAL
   }
 );
@@ -4485,6 +4527,11 @@ function abrirEdicaoCategoria_(id) {
   );
   const categoriaLocal = document.getElementById("categoryLocal");
   if (categoriaLocal) categoriaLocal.checked = categoria.local === true;
+  const tipo = document.getElementById("categoryType");
+  const composicao = document.getElementById("categoryComposition");
+  if (tipo) tipo.value = categoria.tipoParticipacao || "INDIVIDUAL";
+  atualizarOpcoesComposicaoCategoria_();
+  if (composicao) composicao.value = categoria.composicao || "LIVRE";
   sincronizarComprovanteCategoriaLocal_();
 
 
