@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS categories (
   max_age INTEGER,
   required_documents TEXT,
   is_local INTEGER NOT NULL DEFAULT 0,
+  participation_type TEXT NOT NULL DEFAULT 'INDIVIDUAL',
+  composition TEXT NOT NULL DEFAULT 'LIVRE',
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (event_id) REFERENCES events(id)
@@ -44,6 +46,7 @@ CREATE TABLE IF NOT EXISTS batches (
   amount_cents INTEGER NOT NULL DEFAULT 0,
   general_amount_cents INTEGER,
   local_amount_cents INTEGER,
+  double_amount_cents INTEGER,
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (event_id) REFERENCES events(id)
