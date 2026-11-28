@@ -3025,7 +3025,9 @@ function atualizarValorCadastroAdmin_() {
     campo.readOnly = true;
     return;
   }
-  const valor = categoria?.local ? lote.valorLocal : lote.valorGeral;
+  const valor = categoria?.tipoParticipacao === "DUPLA"
+    ? lote.valorDupla
+    : (categoria?.local ? lote.valorLocal : lote.valorGeral);
   campo.value = Number(valor || 0).toFixed(2);
   campo.placeholder = "";
   campo.readOnly = true;
@@ -3172,6 +3174,8 @@ function normalizarCategorias_(valor) {
       : Number(x.idadeMaxima),
     ativo: x.ativo === true || String(x.ativo || "").toUpperCase() === "SIM",
     local: x.local === true || Number(x.local) === 1,
+    tipoParticipacao: String(x.tipoParticipacao || "INDIVIDUAL").toUpperCase(),
+    composicao: String(x.composicao || "LIVRE").toUpperCase(),
     documentosObrigatorios: Array.isArray(x.documentosObrigatorios)
       ? x.documentosObrigatorios.map(v => String(v || "").trim()).filter(Boolean)
       : String(x.documentosObrigatorios || "").split("|").map(v => v.trim()).filter(Boolean)
@@ -3564,11 +3568,12 @@ function renderLotesConfig_() {
 
           <div class="management-price">
 
-            <small>GERAL / LOCAL</small>
+            <small>GERAL / LOCAL / DUPLA</small>
 
             <b>
               R$ ${Number(l.valorGeral).toFixed(2).replace(".", ",")}
               <span class="management-price-secondary">Local: R$ ${Number(l.valorLocal).toFixed(2).replace(".", ",")}</span>
+              <span class="management-price-secondary">Dupla: R$ ${Number(l.valorDupla).toFixed(2).replace(".", ",")}</span>
             </b>
 
           </div>
