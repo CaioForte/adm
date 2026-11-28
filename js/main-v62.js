@@ -2991,19 +2991,69 @@ const registrationForm =
 const registrationError =
   document.getElementById("registrationError");
 
+function categoriaCadastroSelecionada_() {
+  const nome = document.getElementById("newCategoria")?.value || "";
+  return categoriasConfig.find(c => c.nome === nome) || null;
+}
+
+function cadastroEhDupla_() {
+  return String(categoriaCadastroSelecionada_()?.tipoParticipacao || "INDIVIDUAL").toUpperCase() === "DUPLA";
+}
+
+function atualizarModoDuplaCadastro_() {
+  const dupla = cadastroEhDupla_();
+  const painel = document.getElementById("duplaAthleteFields");
+  const campoSexo = document.getElementById("newSexoField");
+  if (painel) painel.hidden = !dupla;
+  if (campoSexo) campoSexo.hidden = !dupla;
+
+  const sexo1 = document.getElementById("newSexo");
+  if (sexo1) {
+    sexo1.disabled = !dupla;
+    sexo1.required = dupla;
+    if (!dupla) sexo1.value = "";
+  }
+
+  const obrigatoriosPrimeiro = ["newTelefone", "newDataNascimento", "newEstado", "newCidade"];
+  obrigatoriosPrimeiro.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.required = dupla;
+  });
+
+  const idsSegundo = ["newNome2","newCpf2","newSexo2","newEmail2","newTelefone2","newDataNascimento2","newEstado2","newCidade2"];
+  idsSegundo.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = !dupla;
+    el.required = dupla;
+    if (!dupla) el.value = "";
+  });
+}
+
 function atualizarDocumentosCadastro_() {
   const area = document.getElementById("registrationDocuments");
-  const categoriaNome = document.getElementById("newCategoria")?.value || "";
+  const categoria = categoriaCadastroSelecionada_();
   if (!area) return;
-  const categoria = categoriasConfig.find(c => c.nome === categoriaNome);
   const docs = Array.isArray(categoria?.documentosObrigatorios) ? categoria.documentosObrigatorios : [];
   if (!docs.length) { area.hidden = true; area.innerHTML = ""; return; }
+  const dupla = cadastroEhDupla_();
   const rotulos = { RG: "RG", CPF: "CPF", CERTIDAO: "Certidão", COMPROVANTE_RESIDENCIA: "Comprovante de residência" };
+  const montarGrupo = (atleta, titulo) => `
+    <div class="registration-documents-box">
+      <h3>${titulo}</h3>
+      ${docs.map(tipo => {
+        const id = dupla ? `registrationDoc-${atleta}-${esc(tipo)}` : `registrationDoc-${esc(tipo)}`;
+        return `<label class="registration-document-item"><small>${esc(rotulos[tipo] || tipo)} *</small><input type="file" id="${id}" data-registration-document="${esc(tipo)}" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" required><span class="registration-document-help">PDF, JPG, PNG ou WEBP — até 5 MB</span></label>`;
+      }).join("")}
+    </div>`;
   area.hidden = false;
-  area.innerHTML = `<div class="registration-documents-box"><h3>DOCUMENTOS OBRIGATÓRIOS</h3>${docs.map(tipo => `<label class="registration-document-item"><small>${esc(rotulos[tipo] || tipo)} *</small><input type="file" id="registrationDoc-${esc(tipo)}" data-registration-document="${esc(tipo)}" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" required><span class="registration-document-help">PDF, JPG, PNG ou WEBP — até 5 MB</span></label>`).join("")}</div>`;
+  area.innerHTML = dupla
+    ? montarGrupo(1, "DOCUMENTOS DO PRIMEIRO ATLETA") + montarGrupo(2, "DOCUMENTOS DO SEGUNDO ATLETA")
+    : montarGrupo(1, "DOCUMENTOS OBRIGATÓRIOS");
 }
 
 document.getElementById("newCategoria")?.addEventListener("change", () => {
+  atualizarModoDuplaCadastro_();
   atualizarDocumentosCadastro_();
   atualizarValorCadastroAdmin_();
 });
@@ -3053,6 +3103,7 @@ async function abrirModalCadastro() {
       categoriasConfig[0].nome;
   }
 
+  atualizarModoDuplaCadastro_();
   atualizarDocumentosCadastro_();
 
   if (valorInput) {
@@ -3092,6 +3143,9 @@ function fecharModalCadastro() {
   }
   const docsArea = document.getElementById("registrationDocuments");
   if (docsArea) { docsArea.hidden = true; docsArea.innerHTML = ""; }
+  const cidade2 = document.getElementById("newCidade2");
+  if (cidade2) { cidade2.disabled = true; cidade2.innerHTML = '<option value="">Selecione primeiro o estado</option>'; }
+  atualizarModoDuplaCadastro_();
 
   if (registrationError) {
     registrationError.hidden = true;
@@ -5117,98 +5171,212 @@ async function inicializarEstadoCidadeCadastroAdmin_() {
 
 inicializarEstadoCidadeCadastroAdmin_();
 
+function inicializarEstadoCidadeDuplaCadastro_() {
+  const estadoBase = document.getElementById("newEstado");
+  const estado = document.getElementById("newEstado2");
+  const cidade = document.getElementById("newCidade2");
+  if (!estadoBase || !estado || !cidade) return;
+
+  estado.innerHTML = estadoBase.innerHTML;
+  cidade.disabled = true;
+  cidade.innerHTML = '<option value="">Selecione primeiro o estado</option>';
+  let requisicao = 0;
+
+  estado.addEventListener("change", async () => {
+    const uf = estado.value;
+    const atual = ++requisicao;
+    cidade.disabled = true;
+    cidade.innerHTML = '<option value="">Carregando cidades...</option>';
+    if (!uf) {
+      cidade.innerHTML = '<option value="">Selecione primeiro o estado</option>';
+      return;
+    }
+    try {
+      const resp = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${encodeURIComponent(uf)}/municipios`);
+      if (!resp.ok) throw new Error(`IBGE respondeu HTTP ${resp.status}`);
+      const cidades = await resp.json();
+      if (atual !== requisicao) return;
+      if (!Array.isArray(cidades)) throw new Error("Resposta inválida da API do IBGE");
+      cidade.innerHTML = '<option value="">Selecione a cidade</option>';
+      cidades.sort((a,b) => String(a.nome).localeCompare(String(b.nome),"pt-BR")).forEach(item => {
+        if (!item?.nome) return;
+        const option = document.createElement("option");
+        option.value = item.nome;
+        option.textContent = item.nome;
+        cidade.appendChild(option);
+      });
+      cidade.disabled = false;
+    } catch (erro) {
+      if (atual !== requisicao) return;
+      console.error("Erro ao carregar cidades do segundo atleta:", erro);
+      cidade.innerHTML = '<option value="">Não foi possível carregar as cidades</option>';
+      cidade.disabled = true;
+    }
+  });
+}
+inicializarEstadoCidadeDuplaCadastro_();
+
+document.getElementById("newCpf2")?.addEventListener("input", e => {
+  e.target.value = formatarCpfCadastro_(e.target.value);
+});
+
 registrationForm?.addEventListener("submit", async e => {
   e.preventDefault();
 
   const s = getSession();
-
   if (!s?.token) {
     showLogin();
     return;
   }
 
   const saveBtn = document.getElementById("saveRegistration");
+  const dupla = cadastroEhDupla_();
+  const categoriaNome = document.getElementById("newCategoria").value;
+  const payload = {
+    token: s.token,
+    nome: document.getElementById("newNome").value.trim(),
+    cpf: document.getElementById("newCpf").value.trim(),
+    email: document.getElementById("newEmail").value.trim(),
+    telefone: document.getElementById("newTelefone").value.trim(),
+    dataNascimento: document.getElementById("newDataNascimento")?.value || "",
+    cidade: document.getElementById("newCidade")?.value.trim() || "",
+    estado: document.getElementById("newEstado")?.value.trim().toUpperCase() || "",
+    categoria: categoriaNome,
+    valor: document.getElementById("newValor").value,
+    observacao: document.getElementById("newObservacao").value.trim(),
+    evento: EVENTO_ATUAL,
+    cortesia: document.getElementById("newCortesia")?.checked || false
+  };
 
-const payload = {
-  token: s.token,
-  nome: document.getElementById("newNome").value.trim(),
-  cpf: document.getElementById("newCpf").value.trim(),
-  email: document.getElementById("newEmail").value.trim(),
-  telefone: document.getElementById("newTelefone").value.trim(),
-  dataNascimento: document.getElementById("newDataNascimento")?.value || "",
-  cidade: document.getElementById("newCidade")?.value.trim() || "",
-  estado: document.getElementById("newEstado")?.value.trim().toUpperCase() || "",
-  categoria: document.getElementById("newCategoria").value,
-  valor: document.getElementById("newValor").value,
-  observacao: document.getElementById("newObservacao").value.trim(),
-  evento: EVENTO_ATUAL,
-  cortesia:
-    document.getElementById("newCortesia")?.checked || false
-};
-
-  const categoriaSelecionada = categoriasConfig.find(c => c.nome === payload.categoria);
-  const documentosObrigatorios = Array.isArray(categoriaSelecionada?.documentosObrigatorios) ? categoriaSelecionada.documentosObrigatorios : [];
-  payload.documentos = [];
-  for (const tipo of documentosObrigatorios) {
-    const input = document.getElementById(`registrationDoc-${tipo}`);
-    const file = input?.files?.[0];
-    if (!file) {
-      registrationError.textContent = `Anexe o documento obrigatório: ${{RG:"RG",CPF:"CPF",CERTIDAO:"Certidão",COMPROVANTE_RESIDENCIA:"Comprovante de residência"}[tipo] || tipo}.`;
-      registrationError.hidden = false;
-      input?.focus();
-      return;
-    }
-    const permitidos = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-    if (file.size > 5 * 1024 * 1024 || (file.type && !permitidos.includes(file.type))) {
-      registrationError.textContent = `O arquivo de ${tipo} deve ser PDF, JPG, PNG ou WEBP e ter até 5 MB.`;
-      registrationError.hidden = false;
-      input?.focus();
-      return;
-    }
-    payload.documentos.push({ tipo, nome: file.name, mimeType: file.type || "application/octet-stream", arquivoBase64: await bytesToBase64(file) });
-  }
+  const mostrarErro = mensagem => {
+    registrationError.textContent = mensagem;
+    registrationError.hidden = false;
+  };
 
   if (!payload.nome || !payload.cpf || !payload.email || !payload.categoria) {
-    registrationError.textContent = "Preencha os campos obrigatórios.";
-    registrationError.hidden = false;
+    mostrarErro("Preencha os campos obrigatórios.");
     return;
   }
-
   if (!validarCpfCadastro_(payload.cpf)) {
-    registrationError.textContent = "CPF inválido. Informe um CPF válido com 11 dígitos.";
-    registrationError.hidden = false;
+    mostrarErro("CPF do primeiro atleta inválido. Informe um CPF válido com 11 dígitos.");
     document.getElementById("newCpf")?.focus();
     return;
   }
 
+  const permitidos = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+  const coletarDocumentos = async (atleta, tipos, eDupla) => {
+    const documentos = [];
+    for (const tipo of tipos) {
+      const id = eDupla ? `registrationDoc-${atleta}-${tipo}` : `registrationDoc-${tipo}`;
+      const input = document.getElementById(id);
+      const file = input?.files?.[0];
+      if (!file) throw new Error(`Anexe o documento obrigatório (${tipo}) do atleta ${atleta}.`);
+      if (file.size > 5 * 1024 * 1024 || (file.type && !permitidos.includes(file.type))) {
+        throw new Error(`O arquivo de ${tipo} do atleta ${atleta} deve ser PDF, JPG, PNG ou WEBP e ter até 5 MB.`);
+      }
+      documentos.push({
+        tipo,
+        nome: file.name,
+        mimeType: file.type || "application/octet-stream",
+        arquivoBase64: await bytesToBase64(file)
+      });
+    }
+    return documentos;
+  };
+
+  const categoriaSelecionada = categoriasConfig.find(c => c.nome === categoriaNome);
+  const documentosObrigatorios = Array.isArray(categoriaSelecionada?.documentosObrigatorios)
+    ? categoriaSelecionada.documentosObrigatorios
+    : [];
+
+  if (dupla) {
+    const segundo = {
+      nome: document.getElementById("newNome2").value.trim(),
+      cpf: document.getElementById("newCpf2").value.trim(),
+      sexo: document.getElementById("newSexo2").value,
+      email: document.getElementById("newEmail2").value.trim(),
+      telefone: document.getElementById("newTelefone2").value.trim(),
+      dataNascimento: document.getElementById("newDataNascimento2").value,
+      estado: document.getElementById("newEstado2").value.trim().toUpperCase(),
+      cidade: document.getElementById("newCidade2").value.trim()
+    };
+    const primeiro = {
+      nome: payload.nome,
+      cpf: payload.cpf,
+      sexo: document.getElementById("newSexo").value,
+      email: payload.email,
+      telefone: payload.telefone,
+      dataNascimento: payload.dataNascimento,
+      estado: payload.estado,
+      cidade: payload.cidade
+    };
+
+    for (const [numero, atleta] of [[1, primeiro], [2, segundo]]) {
+      if (!atleta.nome || !atleta.cpf || !atleta.sexo || !atleta.email || !atleta.telefone ||
+          !atleta.dataNascimento || !atleta.estado || !atleta.cidade) {
+        mostrarErro(`Preencha todos os dados obrigatórios do atleta ${numero}.`);
+        return;
+      }
+      if (!validarCpfCadastro_(atleta.cpf)) {
+        mostrarErro(`CPF do atleta ${numero} inválido. Informe um CPF válido com 11 dígitos.`);
+        document.getElementById(numero === 1 ? "newCpf" : "newCpf2")?.focus();
+        return;
+      }
+    }
+    if (String(primeiro.cpf).replace(/\D/g,"") === String(segundo.cpf).replace(/\D/g,"")) {
+      mostrarErro("Os atletas da dupla precisam informar CPFs diferentes.");
+      document.getElementById("newCpf2")?.focus();
+      return;
+    }
+
+    const composicao = String(categoriaSelecionada?.composicao || "LIVRE").toUpperCase();
+    if ((composicao === "MASCULINA" && (primeiro.sexo !== "MASCULINO" || segundo.sexo !== "MASCULINO")) ||
+        (composicao === "FEMININA" && (primeiro.sexo !== "FEMININO" || segundo.sexo !== "FEMININO")) ||
+        (composicao === "MISTA" && primeiro.sexo === segundo.sexo)) {
+      mostrarErro("O sexo informado para os atletas não corresponde à composição da categoria selecionada.");
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "CADASTRANDO DUPLA...";
+    registrationError.hidden = true;
+    try {
+      primeiro.documentos = await coletarDocumentos(1, documentosObrigatorios, true);
+      segundo.documentos = await coletarDocumentos(2, documentosObrigatorios, true);
+      payload.atletas = [primeiro, segundo];
+    } catch (erro) {
+      mostrarErro(erro.message || "Verifique os documentos obrigatórios dos atletas.");
+      saveBtn.disabled = false;
+      saveBtn.textContent = "CADASTRAR INSCRIÇÃO";
+      return;
+    }
+  } else {
+    try {
+      payload.documentos = await coletarDocumentos(1, documentosObrigatorios, false);
+    } catch (erro) {
+      mostrarErro(erro.message || "Verifique os documentos obrigatórios.");
+      return;
+    }
+  }
+
   saveBtn.disabled = true;
-  saveBtn.textContent = "CADASTRANDO...";
+  saveBtn.textContent = dupla ? "CADASTRANDO DUPLA..." : "CADASTRANDO...";
   registrationError.hidden = true;
 
   try {
     const criada = await apiPost("cadastrarInscricao", payload);
-
+    const numero = criada.numeroInscricao ?? criada.atletas?.[0]?.numeroInscricao ?? "—";
     fecharModalCadastro();
-
     notificar(
       "success",
-      "INSCRIÇÃO CADASTRADA",
-      `Inscrição #${String(criada.numeroInscricao).padStart(3, "0")} criada com sucesso.${criada.checkoutUrl ? " Checkout InfinitePay gerado." : (criada.avisoCheckout ? " Atenção: não foi possível gerar o checkout; gere pelo modal Ver detalhes." : "")}`
+      dupla ? "DUPLA CADASTRADA" : "INSCRIÇÃO CADASTRADA",
+      `${dupla ? "Dupla" : "Inscrição"} #${String(numero).padStart(3, "0")} criada com sucesso.${criada.checkoutUrl ? " Checkout InfinitePay gerado." : (criada.avisoCheckout ? " Atenção: não foi possível gerar o checkout; gere pelo modal Ver detalhes." : "")}`
     );
-
     await carregarInscricoes();
     await carregarDashboard();
-
   } catch (err) {
-    registrationError.textContent =
-      err.message || "Não foi possível cadastrar a inscrição.";
-    registrationError.hidden = false;
-
-    notificar(
-      "error",
-      "ERRO AO CADASTRAR",
-      err.message || "Não foi possível cadastrar a inscrição."
-    );
+    mostrarErro(err.message || "Não foi possível cadastrar a inscrição.");
+    notificar("error","ERRO AO CADASTRAR",err.message || "Não foi possível cadastrar a inscrição.");
   } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = "CADASTRAR INSCRIÇÃO";
