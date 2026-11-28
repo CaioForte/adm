@@ -4530,8 +4530,8 @@ function abrirEdicaoCategoria_(id) {
   const tipo = document.getElementById("categoryType");
   const composicao = document.getElementById("categoryComposition");
   if (tipo) tipo.value = categoria.tipoParticipacao || "INDIVIDUAL";
-  if (composicao) composicao.value = categoria.composicao || "LIVRE";
   atualizarOpcoesComposicaoCategoria_();
+  if (composicao) composicao.value = categoria.composicao || "LIVRE";
   sincronizarComprovanteCategoriaLocal_();
 
 
